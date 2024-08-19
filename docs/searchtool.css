@@ -1,0 +1,29 @@
+/* Custom styling for the search tool page */
+body {
+    background-color: #f0f2f5;
+}
+
+.navbar {
+    margin-bottom: 20px;
+}
+
+.container {
+    max-width: 600px;
+    margin: auto;
+}
+
+/* Remove whitespace between label and small elements */
+.form-group label {
+    margin-bottom: 0; /* Remove bottom margin from label */
+}
+
+.form-group small.form-text {
+    margin-top: 0; /* Remove top margin from small */
+    display: block; /* Ensure small is displayed on a new line */
+}
+
+/* Optional: Adjust border styling for results box */
+#results {
+    border-radius: 5px;
+    margin-top: 10px; /* Add some margin above the results box */
+}
