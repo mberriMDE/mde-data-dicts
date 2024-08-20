@@ -91,21 +91,18 @@ def initialize_data_dict(server_name,
 
 
 if __name__ == "__main__":
-    files = list_files("RDMPROD01\\RDMESSA")
-    tables = []
-    for file in files:
-        table = file.replace("RDMPROD01\\RDMESSA\\RPT\\RDMESSA.RPT.",
-                             "").replace("_data_dict.xlsx", "")
-        tables.append(table)
+    # files = list_files("RDMPROD01\\RDMESSA")
+    with open('data\\sleds_table_names.csv') as f:
+        tables = [line.strip() for line in f]
     ### Section to initialize data dictionaries
-    server = 'EDU-RDMPROD01'
-    database = 'RDMESSA'
-    view = 'RPT'
+    server = 'E60SDWP20WDB001'
+    database = 'SLEDSDW'
+    view = 'dbo'
     # tables = files
     for table in tables:
         data_dict = initialize_data_dict(server, database, view, table)
         json_data = json.dumps(data_dict, indent=4)
-        file_name = f"{database}\\{database}.{view}.{table}_data_dict.xlsx"
+        file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
         dd_json_to_excel(json_data,
                          file_name,

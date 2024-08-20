@@ -15,7 +15,14 @@ def trunc31(string):
     return string
 
 
-def initialize_code_sheet(current_rows, server_name, database_name, view_name, table_name, field_name, find_codes=True, order_codes=False):
+def initialize_code_sheet(current_rows,
+                          server_name,
+                          database_name,
+                          view_name,
+                          table_name,
+                          field_name,
+                          find_codes=True,
+                          order_codes=False):
     '''
     Selects the distinct values from a field in a table and creates a data dictionary for the field.
 
@@ -44,7 +51,8 @@ def initialize_code_sheet(current_rows, server_name, database_name, view_name, t
         # Create a cursor from the connection
         cursor = conn.cursor()
         cursor.execute(
-            f"SELECT DISTINCT [{field_name}] FROM [{database_name}].[{view_name}].[{table_name}] ORDER BY [{field_name}]")
+            f"SELECT DISTINCT [{field_name}] FROM [{database_name}].[{view_name}].[{table_name}] ORDER BY [{field_name}]"
+        )
 
         codes_in_data = []
 
@@ -110,36 +118,52 @@ def initialize_code_sheet(current_rows, server_name, database_name, view_name, t
 def get_legend(data_dict_headers):
     standard_legend = [
         {
-            "Data Dictionary Column Name": "Field Name",
-            "Description": "The name of the column in the table or view being referenced in this data dictionary."
+            "Data Dictionary Column Name":
+            "Field Name",
+            "Description":
+            "The name of the column in the table or view being referenced in this data dictionary."
         },
         {
-            "Data Dictionary Column Name": "Description",
-            "Description": "A brief definition that could stand alone from other element definitions."
+            "Data Dictionary Column Name":
+            "Description",
+            "Description":
+            "A brief definition that could stand alone from other element definitions."
         },
         {
-            "Data Dictionary Column Name": "Reporting Status",
-            "Description": "Summarizes if the column is being used\nActive = This column is currently being used\nInactive = This column is no longer used"
+            "Data Dictionary Column Name":
+            "Reporting Status",
+            "Description":
+            "Summarizes if the column is being used\nActive = This column is currently being used\nInactive = This column is no longer used"
         },
         {
-            "Data Dictionary Column Name": "Introduced",
-            "Description": "The first school year when the column/code was first in use in the database. If unknown, this should be the first date in which the column appears to not be NULL/blanks."
+            "Data Dictionary Column Name":
+            "Introduced",
+            "Description":
+            "The first school year when the column/code was first in use in the database. If unknown, this should be the first date in which the column appears to not be NULL/blanks."
         },
         {
-            "Data Dictionary Column Name": "Discontinued",
-            "Description": "The last school year the column/code was used. Assume that if this cell is blank, the column has not been discontinued."
+            "Data Dictionary Column Name":
+            "Discontinued",
+            "Description":
+            "The last school year the column/code was used. Assume that if this cell is blank, the column has not been discontinued."
         },
         {
-            "Data Dictionary Column Name": "Acceptable Values",
-            "Description": "This column details which values are allowed for a column.\nFormat: cell value = brief description if necessary\nFor columns with many acceptable values, you can use a tab (see testName tab example)"
+            "Data Dictionary Column Name":
+            "Acceptable Values",
+            "Description":
+            "This column details which values are allowed for a column.\nFormat: cell value = brief description if necessary\nFor columns with many acceptable values, you can use a tab (see testName tab example)"
         },
         {
-            "Data Dictionary Column Name": "Required?",
-            "Description": "For use in manually entered fields/tables. Summarizes if the column can be left blank, NULL, or NA.\nR = Required, cannot be left blank\nO = Optional, can be left blank\nC = Conditional, can be left blank depending on other values in the record"
+            "Data Dictionary Column Name":
+            "Required?",
+            "Description":
+            "For use in manually entered fields/tables. Summarizes if the column can be left blank, NULL, or NA.\nR = Required, cannot be left blank\nO = Optional, can be left blank\nC = Conditional, can be left blank depending on other values in the record"
         },
         {
-            "Data Dictionary Column Name": "Null Meaning",
-            "Description": "Summarizes the meaning of a NULL value in the column."
+            "Data Dictionary Column Name":
+            "Null Meaning",
+            "Description":
+            "Summarizes the meaning of a NULL value in the column."
             "\nN = NULL values are not allowed by SQL"
             "\nUE = NULL values are allowed by SQL, but are unexpected and should not be in the column"
             "\nDNA = NULL values are allowed by SQL and are expected to be in the column. A NULL value indicates that the field does not apply to the record."
@@ -159,24 +183,34 @@ def get_legend(data_dict_headers):
         #     "Description": "Summarizes if the column can accept NULL values.\nY = Yes, NULL values are allowed\nN = No, NULL values are not allowed"
         # },
         {
-            "Data Dictionary Column Name": "Data Type",
-            "Description": "Details the column's class (string, numeric, date/time, etc.)"
+            "Data Dictionary Column Name":
+            "Data Type",
+            "Description":
+            "Details the column's class (string, numeric, date/time, etc.)"
         },
         {
-            "Data Dictionary Column Name": "Max Characters",
-            "Description": "The maximum number of characters that this column can hold in a cell"
+            "Data Dictionary Column Name":
+            "Max Characters",
+            "Description":
+            "The maximum number of characters that this column can hold in a cell"
         },
         {
-            "Data Dictionary Column Name": "Notes",
-            "Description": "Any additional historical context or current information about the column that does not apply to other columns in the data dictionary."
+            "Data Dictionary Column Name":
+            "Notes",
+            "Description":
+            "Any additional historical context or current information about the column that does not apply to other columns in the data dictionary."
         },
         {
-            "Data Dictionary Column Name": "Validations",
-            "Description": "List any validations that need to be conducted for that column. A validation is any process, human or machine enforced, that modulates the data to ensure accuracy. Can be left blank if no validations need to be conducted."
+            "Data Dictionary Column Name":
+            "Validations",
+            "Description":
+            "List any validations that need to be conducted for that column. A validation is any process, human or machine enforced, that modulates the data to ensure accuracy. Can be left blank if no validations need to be conducted."
         },
         {
-            "Data Dictionary Column Name": "Key Information",
-            "Description": "Indicates if the field is a key field for the table.\n"
+            "Data Dictionary Column Name":
+            "Key Information",
+            "Description":
+            "Indicates if the field is a key field for the table.\n"
             "Primary Key (PK)\n"
             "Foreign Key (FK)\n"
             "Unique Key (UK)\n"
@@ -186,16 +220,22 @@ def get_legend(data_dict_headers):
             "Leave cell blank if this column is not a key field."
         },
         {
-            "Data Dictionary Column Name": "Source Information",
-            "Description": "If this column is being populated from another source table, the source database, source table, and source field name are listed here.\nLeave cell blank if this column is not sourced from somewhere else in SQL."
+            "Data Dictionary Column Name":
+            "Source Information",
+            "Description":
+            "If this column is being populated from another source table, the source database, source table, and source field name are listed here.\nLeave cell blank if this column is not sourced from somewhere else in SQL."
         },
         {
-            "Data Dictionary Column Name": "Raw Data Origin",
-            "Description": "The raw data file name (.csv/.xlsx/.tab, etc.) where the data originates.\nLeave cell blank if this column is not directly populated from a raw data file."
+            "Data Dictionary Column Name":
+            "Raw Data Origin",
+            "Description":
+            "The raw data file name (.csv/.xlsx/.tab, etc.) where the data originates.\nLeave cell blank if this column is not directly populated from a raw data file."
         },
         {
-            "Data Dictionary Column Name": "Reporting Cycle",
-            "Description": "The cycle in which the data is reported. For example, Fall, End of Year, etc."
+            "Data Dictionary Column Name":
+            "Reporting Cycle",
+            "Description":
+            "The cycle in which the data is reported. For example, Fall, End of Year, etc."
         }
     ]
     legend = []
@@ -207,13 +247,18 @@ def get_legend(data_dict_headers):
     return legend
 
 
-def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, custom_col_names=None):
+def dd_json_to_excel(data,
+                     output_file,
+                     find_codes=False,
+                     order_codes=False,
+                     custom_col_names=None):
     """
     Convert a JSON data dictionary to an Excel workbook.
 
     Args:
         data (str): The JSON formatted data dictionary to convert.
         output_file (str): The path to the output Excel file.
+        find_codes (bool): Whether or not to populate code sheets with the codes (unique values) that appear in the SQL
 
     Returns:
         None
@@ -231,25 +276,37 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
         data['Workbook Column Names'] = get_col_headers(database_name)
 
     # Initialize the code sheet codes
-    for variable in tqdm(data['Data Dictionary'], desc=f'Finding code values for {name}', leave=False):
+    for variable in tqdm(data['Data Dictionary'],
+                         desc=f'Finding code values for {name}',
+                         leave=False):
         if 'Acceptable Values' in variable:
             if isinstance(variable['Acceptable Values'], list):
                 # This is to check if the variable has character components instead of codes, in which case we don't want to find codes
                 char_components = False
-                if 'character' in variable['Notes'].lower() and 'component' in variable['Notes'].lower():
+                if 'character' in variable['Notes'].lower(
+                ) and 'component' in variable['Notes'].lower():
                     char_components = True
                 single_find_codes = find_codes if not char_components else False
 
                 current_rows = {
-                    row['Code']: row for row in variable['Acceptable Values']}
+                    row['Code']: row
+                    for row in variable['Acceptable Values']
+                }
 
                 # Check if 'range' is in the notes or description of the codes, in which case we don't want to find codes
                 for code_row in current_rows.values():
-                    if 'range' in code_row['Description'].lower() or 'range' in code_row['Notes'].lower():
+                    if 'range' in code_row['Description'].lower(
+                    ) or 'range' in code_row['Notes'].lower():
                         single_find_codes = False
 
-                dict_list = initialize_code_sheet(
-                    current_rows, server_name, database_name, view_name, table_name, variable['Field Name'], find_codes=single_find_codes, order_codes=order_codes)
+                dict_list = initialize_code_sheet(current_rows,
+                                                  server_name,
+                                                  database_name,
+                                                  view_name,
+                                                  table_name,
+                                                  variable['Field Name'],
+                                                  find_codes=single_find_codes,
+                                                  order_codes=order_codes)
                 variable['Acceptable Values'] = dict_list
 
     # Initialize a Pandas Excel writer with the xlsxwriter engine
@@ -262,13 +319,15 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
             'text_wrap': True,
             'valign': 'top',
             'fg_color': '#D9EAD3',  # Light green
-            'border': 1})
+            'border': 1
+        })
 
         # Define a text wrap format for general cell content
         text_format = workbook.add_format({
             'text_wrap': True,
             'valign': 'top',
-            'num_format': '@'})
+            'num_format': '@'
+        })
 
         # Define a hyperlink format
         hyperlink_format = workbook.add_format({
@@ -284,8 +343,11 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
             data['Workbook Column Names']['Data Dictionary'])
 
         df_column_descriptions = pd.DataFrame(column_descriptions)
-        df_column_descriptions.to_excel(
-            writer, sheet_name='Legend', index=False, startrow=1, header=False)
+        df_column_descriptions.to_excel(writer,
+                                        sheet_name='Legend',
+                                        index=False,
+                                        startrow=1,
+                                        header=False)
         worksheet_cd = writer.sheets['Legend']
         # Write the headers with formatting
         for col_num, value in enumerate(df_column_descriptions.columns.values):
@@ -303,7 +365,9 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
 
         # Write FAQ data starting from the 4th row
         if not df_faqs.empty:
-            for idx, (faq, resp) in enumerate(zip(df_faqs['FAQ'], df_faqs['Response']), start=4):
+            for idx, (faq, resp) in enumerate(zip(df_faqs['FAQ'],
+                                                  df_faqs['Response']),
+                                              start=4):
                 if pd.isnull(faq):
                     faq = ""
                 if pd.isnull(resp):
@@ -327,8 +391,8 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
         rel_headers = data['Workbook Column Names']['Relationships']
         for col_num, value in enumerate(rel_headers):
             worksheet_relationships.write(0, col_num, value, header_format)
-            worksheet_relationships.set_column(
-                col_num, col_num, 50, text_format)
+            worksheet_relationships.set_column(col_num, col_num, 50,
+                                               text_format)
         # Write the relationship data starting from the second row
         if not df_relationships.empty:
             for idx, row in df_relationships.iterrows():
@@ -347,8 +411,11 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
         # Ensure all required columns are present, in the correct order
         df_data_dict = df_data_dict.reindex(columns=required_columns)
 
-        df_data_dict.to_excel(
-            writer, sheet_name='Data Dictionary', index=False, startrow=1, header=False)
+        df_data_dict.to_excel(writer,
+                              sheet_name='Data Dictionary',
+                              index=False,
+                              startrow=1,
+                              header=False)
         worksheet_ac = writer.sheets['Data Dictionary']
         # Apply text wrap to all cells in the 'Data Dictionary' sheet
         worksheet_ac.set_column('A:Z', None, text_format)
@@ -375,13 +442,12 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
             'Reporting Cycle': 25,
             'Notes': 50,
             'Key Information': 25,
-
         }
         # Set individual column widths
         for i, column in enumerate(df_data_dict.columns):
             if column in all_column_widths:
-                worksheet_ac.set_column(
-                    i, i, all_column_widths[column], text_format)
+                worksheet_ac.set_column(i, i, all_column_widths[column],
+                                        text_format)
 
         # Codes Sheets
         # For each 'Acceptable Values' that has 'Codes' entry, create a new sheet
@@ -397,8 +463,11 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
 
                 # Truncate the sheet name to 31 characters
                 sheet_name = trunc31(variable['Field Name'])
-                df_codes.to_excel(writer, sheet_name=sheet_name,
-                                  index=False, startrow=1, header=False)
+                df_codes.to_excel(writer,
+                                  sheet_name=sheet_name,
+                                  index=False,
+                                  startrow=1,
+                                  header=False)
                 worksheet_codes = writer.sheets[sheet_name]
                 # Apply text wrap to all cells in the new sheet
                 worksheet_codes.set_column('A:Z', None, text_format)
@@ -407,11 +476,12 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
                 # variable['Acceptable Values'] = 'Codes'
 
                 # Format codes sheet headers
-                for col_num, value in enumerate(data['Workbook Column Names']['Codes']):
+                for col_num, value in enumerate(
+                        data['Workbook Column Names']['Codes']):
                     worksheet_codes.write(0, col_num, value, header_format)
                     # Set column width to 20
-                    worksheet_codes.set_column(
-                        col_num, col_num, 20, text_format)
+                    worksheet_codes.set_column(col_num, col_num, 20,
+                                               text_format)
                 # Set the column widths for the codes sheet
                 codes_column_widths = {
                     'Code': 15,
@@ -425,18 +495,20 @@ def dd_json_to_excel(data, output_file, find_codes=False, order_codes=False, cus
                 # Set individual column widths
                 for i, column in enumerate(df_codes.columns):
                     if column in codes_column_widths:
-                        worksheet_codes.set_column(
-                            i, i, codes_column_widths[column], text_format)
+                        worksheet_codes.set_column(i, i,
+                                                   codes_column_widths[column],
+                                                   text_format)
 
                 # Add a hyperlink in the new sheet back to the variable in 'Data Dictionary' sheet
                 # Find the row index of the variable in the 'Data Dictionary' sheet
-                row_index = df_data_dict[df_data_dict['Field Name']
-                                         == variable['Field Name']].index[0]
+                row_index = df_data_dict[df_data_dict['Field Name'] ==
+                                         variable['Field Name']].index[0]
                 cell = f'A{row_index + 2}'
                 link_target = f"'Data Dictionary'!{cell}"
                 formula = f'=HYPERLINK("#{link_target}", "{sheet_name} in Data Dictionary")'
                 worksheet_codes.write_formula(
-                    f'{chr(65+len(data["Workbook Column Names"]["Codes"]))}1', formula, hyperlink_format)
+                    f'{chr(65+len(data["Workbook Column Names"]["Codes"]))}1',
+                    formula, hyperlink_format)
 
         # Handling the Acceptable Values column for links
         for idx, row in df_data_dict.iterrows():
@@ -471,11 +543,31 @@ def old_dd_excel_to_json(input_file, maintain_columns=False):
     meta_column_names = {
         'Legend': ['Data Dictionary Column Name', 'Description'],
         'Info and Uses': ['FAQ', 'Response'],
-        'Relationships': ['Field Name in This Table', 'Relationship', 'External Table Name', 'Field Name in External Table', 'Notes'],
-        'Data Dictionary': ['Field Name', 'Description', 'Reporting Status', 'Introduced', 'Discontinued', 'Acceptable Values',
-                            'Null Meaning', 'Data Type', 'Variable Length', 'Notes', 'Key Information', 'Reporting Cycle', 'Validations',
-                            'Source Information', 'Raw Data Origin',],
-        'Codes': ['Code', 'Description', 'Reporting Status', 'Introduced', 'Discontinued', 'In Data', 'Notes']
+        'Relationships': [
+            'Field Name in This Table', 'Relationship', 'External Table Name',
+            'Field Name in External Table', 'Notes'
+        ],
+        'Data Dictionary': [
+            'Field Name',
+            'Description',
+            'Reporting Status',
+            'Introduced',
+            'Discontinued',
+            'Acceptable Values',
+            'Null Meaning',
+            'Data Type',
+            'Variable Length',
+            'Notes',
+            'Key Information',
+            'Reporting Cycle',
+            'Validations',
+            'Source Information',
+            'Raw Data Origin',
+        ],
+        'Codes': [
+            'Code', 'Description', 'Reporting Status', 'Introduced',
+            'Discontinued', 'In Data', 'Notes'
+        ]
     }
 
     # Load the dd workbook template
@@ -548,7 +640,8 @@ def old_dd_excel_to_json(input_file, maintain_columns=False):
         data_dictionary['Relationships'] = []
 
     # Strip the leading/trailing whitespace and remove all \n from the keys
-    df_all_columns.columns = df_all_columns.columns.str.strip().str.replace('\n', '')
+    df_all_columns.columns = df_all_columns.columns.str.strip().str.replace(
+        '\n', '')
 
     # Iterate over each row in the 'All Columns' DataFrame
     for index, row in df_all_columns.iterrows():
@@ -562,7 +655,8 @@ def old_dd_excel_to_json(input_file, maintain_columns=False):
                 record[key] = value.strip()
 
         # Check if the 'Acceptable Values' indicates there are codes to be read from another sheet
-        if record['Acceptable Values'] == 'Codes' or record['Acceptable Values'] == 0:
+        if record['Acceptable Values'] == 'Codes' or record[
+                'Acceptable Values'] == 0:
             column_name = record['Column Name'].strip()
 
             # Read the specific sheet for the codes, assuming it is named exactly as the 'Column Name'
@@ -570,7 +664,8 @@ def old_dd_excel_to_json(input_file, maintain_columns=False):
                 df_codes = xl.parse(column_name, dtype=str)
 
                 # Strip the leading/trailing whitespace and remove all \n from the keys
-                df_codes.columns = df_codes.columns.str.strip().str.replace('\n', '')
+                df_codes.columns = df_codes.columns.str.strip().str.replace(
+                    '\n', '')
 
                 # Convert the codes sheet into a list of dictionaries
                 codes_list = df_codes.to_dict(orient='records')
@@ -605,6 +700,8 @@ def dd_excel_to_json(input_file, maintain_columns=False):
 
     Args:
         input_file (str): The path to the input Excel file.
+        maintain_columns (bool): Whether or not to maintain the added/removed columns without reverting
+            back to the original column list for that databases
 
     Returns:
         str: A JSON string representing the data dictionary.
@@ -695,7 +792,8 @@ def dd_excel_to_json(input_file, maintain_columns=False):
                 record[key] = value.strip()
 
         # Check if the 'Acceptable Values' indicates there are codes to be read from another sheet
-        if record['Acceptable Values'] == 'Codes' or record['Acceptable Values'] == 0:
+        if record['Acceptable Values'] == 'Codes' or record[
+                'Acceptable Values'] == 0:
             column_name = record['Field Name'].strip()
 
             # Read the specific sheet for the codes, assuming it is named exactly as the 'Field Name'
@@ -733,7 +831,13 @@ def dd_excel_to_json(input_file, maintain_columns=False):
     return json_output
 
 
-def standardize_excel(input_file, output_file, make_json=False, find_codes=False, order_codes=False, maintain_columns=False, custom_col_names=None):
+def standardize_excel(input_file,
+                      output_file,
+                      make_json=False,
+                      find_codes=False,
+                      order_codes=False,
+                      maintain_columns=False,
+                      custom_col_names=None):
     """
     Standardizes and updates the Excel file for the data dictionary by setting the formatting to 
     the standard template.
@@ -741,51 +845,26 @@ def standardize_excel(input_file, output_file, make_json=False, find_codes=False
     Args:
         input_file (str): The path to the input Excel file.
         output_file (str): The path to the output Excel file.
+        make_json (bool): Whether or not to write the intermediary json to a file
+        find_codes (bool): Whether or not to populate code sheets with the codes (unique values) that appear in the SQL
 
     Returns:
         None
     """
-    json_output = dd_excel_to_json(
-        input_file, maintain_columns=maintain_columns)
+    json_output = dd_excel_to_json(input_file,
+                                   maintain_columns=maintain_columns)
     if make_json:
         with open(output_file.replace('.xlsx', '.json'), 'w') as f:
             f.write(json_output)
-    dd_json_to_excel(json_output, output_file, find_codes=find_codes,
-                     order_codes=order_codes, custom_col_names=custom_col_names)
+    dd_json_to_excel(json_output,
+                     output_file,
+                     find_codes=find_codes,
+                     order_codes=order_codes,
+                     custom_col_names=custom_col_names)
 
 
 def list_files(directory, extension=".xlsx"):
     path = Path(directory)
-    return [str(file) for file in path.rglob(f'*{extension}') if file.is_file()]
-
-
-if __name__ == "__main__":
-    directories = ['dbo']
-    files = []
-    for directory in directories:
-        files.extend(list_files(directory))
-    # Remove 'SQLPROD01\\All_DB_Table_Progress.xlsx' from the list
-    files = [file for file in files if 'All_DB_Table_Progress.xlsx' not in file]
-
-    # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
-
-    database_name = 'DIRS'
-    for file in files:
-        # directory = "\\".join(file.split("\\")[0:-1])
-        # names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
-        # database_name = names[0]
-        # find_codes = True if database_name in ['ESSA', 'DIRS'] else False
-
-        if not os.path.exists('1'+directory):
-            os.makedirs('1'+directory)
-        standardize_excel(file, '1'+file, make_json=False, find_codes=True, order_codes=True,
-                          maintain_columns=True, custom_col_names=get_col_headers(database_name))
-
-    # for file in tqdm(files, desc='Standardizing Excel files'):
-    #     directory = "\\".join(file.split("\\")[0:-1])
-    #     if not os.path.exists(directory.replace('SQLPROD01', 'SQLPROD01_Standardized')):
-    #         os.makedirs(directory.replace('SQLPROD01', 'SQLPROD01_Standardized'))
-    #     standardize_excel(file, file.replace('SQLPROD01', 'SQLPROD01_Standardized'), make_json=False, find_codes=False, order_codes=False)
-
-    # file = 'oMDEORG.apilegacy.DBORGUNIT_data_dict.xlsx'
-    # standardize_excel(file, file[1:], make_json=False, find_codes=True, order_codes=True)
+    return [
+        str(file) for file in path.rglob(f'*{extension}') if file.is_file()
+    ]
