@@ -1,3 +1,5 @@
+USE Carl_Perkins;
+
 SELECT 2021 AS [Year]
       ,[ProgramCodeOld]
       ,[CourseCodeOld]
@@ -47,3 +49,5 @@ SELECT 2017 AS [Year]
       ,[Program Course Name] as [ProgramTitleNew]
       ,[(NEW) Course Title] as [CourseTitleNew]
   FROM [Carl_Perkins].[dbo].[ProgramCourse_XRef_2017]
+
+ORDER BY [Year] ASC

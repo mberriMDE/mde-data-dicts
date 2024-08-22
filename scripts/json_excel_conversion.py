@@ -309,6 +309,11 @@ def dd_json_to_excel(data,
                                                   order_codes=order_codes)
                 variable['Acceptable Values'] = dict_list
 
+    # Create the output directory if it doesn't exist
+    directory = os.path.dirname(output_file)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
     # Initialize a Pandas Excel writer with the xlsxwriter engine
     with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
         workbook = writer.book

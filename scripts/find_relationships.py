@@ -249,13 +249,13 @@ def search_fields(json_data,
 
 
 if __name__ == "__main__":
-    files = list_files('RDMESSA')
+    files = list_files('data/SQLPROD01')
     for file in files:
         if '.docx' in file:
             files.remove(file)
     # print(files)
     json_data = load_json_data(files)
-    matching_fields = search_fields(json_data, ['ProgressCode'])
+    matching_fields = search_fields(json_data, ['StatusEndCode'])
     if len(matching_fields) == 0:
         print('No matching fields found')
     for field in matching_fields:

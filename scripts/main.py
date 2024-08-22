@@ -3,12 +3,12 @@ from custom_cols import get_col_headers
 from initialize_data_dict import *
 
 if __name__ == "__main__":
-    directories = ['data\\dbo']
+    directories = ['data\\RDMESSA']
     files = []
     for directory in directories:
         files.extend(list_files(directory))
-    # Remove 'SQLPROD01\\All_DB_Table_Progress.xlsx' from the list
-    files = [file for file in files if 'Data_Dicts_Progress.xlsx' not in file]
+    # Remove non from the list
+    files = [file for file in files if '_data_dict.xlsx' in file]
 
     # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
 
@@ -19,10 +19,8 @@ if __name__ == "__main__":
         # database_name = names[0]
         # find_codes = True if database_name in ['ESSA', 'DIRS'] else False
 
-        if not os.path.exists('1' + directory):
-            os.makedirs('1' + directory)
         standardize_excel(file,
-                          '1' + file,
+                          file.replace(directory, directory + '2'),
                           make_json=False,
                           find_codes=True,
                           order_codes=True,
