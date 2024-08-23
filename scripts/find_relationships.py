@@ -5,20 +5,34 @@ from pathlib import Path
 from json_excel_conversion import dd_json_to_excel, dd_excel_to_json
 import networkx as nx
 import pygraphviz as pgv
+import re
 
 
 class Key:
 
-    def __init__(self, global_name: str, local_name: str, type: str):
+    def __init__(self, global_name: str, local_name: str, type: str,
+                 is_master: bool, dd_for: str):
         self.global_name = global_name
         self.local_name = local_name
         self.type = type
+        self.is_master = is_master
+        self.dd_for = dd_for
+
+
+class CompositeKey:
+
+    def __init__(self, global_names: frozenset, type: str, is_master: bool,
+                 dd_for: str):
+        self.global_name = global_names
+        self.type = type
+        self.is_master = is_master
+        self.dd_for = dd_for
 
 
 class TableNode:
 
-    def __init__(self, graph, dd_for, keys=[], url=None, **attr):
-        self.graph = graph
+    def __init__(self, subgraph, dd_for, keys=[], url=None, **attr):
+        self.subgraph = subgraph
         self.dd_for = dd_for
         self.keys = keys
         self.url = url
@@ -32,28 +46,32 @@ class TableNode:
         self.table = names[3]
 
         # Create the node in the graph
-        self.node = self.graph.add_node(dd_for, **self.attr)
+        self.node = self.subgraph.add_node(dd_for, **self.attr)
 
         # Set node attributes
-        self.graph.get_node(dd_for).attr['shape'] = 'box'
-        self.graph.get_node(dd_for).attr['style'] = 'filled'
-        self.graph.get_node(dd_for).attr['fillcolor'] = 'lightblue'
-        # self.graph.get_node(dd_for).attr['label'] = f"{self.table}\n{', '.join(self.keys)}"
+        # self.subgraph.get_node(dd_for).attr['shape'] = 'circle'
+        self.subgraph.get_node(dd_for).attr['style'] = 'filled'
+        # self.subgraph.get_node(dd_for).attr['fillcolor'] = 'lightblue'
+        # print(dd_for)
+        # print(self.subgraph.get_node(dd_for).attr['fillcolor'])
+        self.subgraph.get_node(dd_for).attr['color'] = 'black'
+        self.subgraph.get_node(dd_for).attr['label'] = self.table
         if url:
-            self.graph.get_node(dd_for).attr['URL'] = url
+            self.subgraph.get_node(dd_for).attr['URL'] = url
+
+    def add_key(self, key):
+        self.keys.append(key)
 
 
 class TableEdge:
 
     def __init__(self, graph: pgv.AGraph, source: 'TableNode',
-                 target: 'TableNode', source_key_type: str,
-                 target_key_type: str, key_name: str, **attr):
+                 target: 'TableNode', source_key, target_key, **attr):
         self.graph = graph
         self.source = source
         self.target = target
-        self.source_key_type = source_key_type
-        self.target_key_type = target_key_type
-        self.key_name = key_name
+        self.source_key = source_key
+        self.target_key = target_key
         self.attr = attr
 
         # Automatically calculate same_view, same_database, and same_server
@@ -62,12 +80,14 @@ class TableEdge:
         self.same_view = self.same_database and source.view == target.view
 
         # Create the edge in the graph
-        self.edge = self.graph.add_edge(source.dd_for, target.dd_for,
+        self.edge = self.graph.add_edge(graph.get_node(source.dd_for),
+                                        graph.get_node(target.dd_for),
                                         **self.attr)
 
         # Set edge attributes based on metadata
-        self.graph.get_edge(source.dd_for,
-                            target.dd_for).attr['label'] = key_name
+        # self.graph.get_edge(
+        #     source.dd_for,
+        #     target.dd_for).attr['label'] = source_key.global_name
         self.graph.get_edge(
             source.dd_for, target.dd_for
         ).attr['color'] = 'blue' if self.same_server else 'red'
@@ -76,50 +96,7 @@ class TableEdge:
         ).attr['style'] = 'solid' if self.same_database else 'dashed'
 
 
-# class TableEdge(pgv.Edge):
-#     def __init__(self, graph: pgv.AGraph, source: 'TableNode', target: 'TableNode',
-#                  source_key_type: str, target_key_type: str, key_name: str, **attr):
-#         super().__init__(graph, source, target)
-#         self.attr.update(attr)
-#         self.source_key_type = source_key_type
-#         self.target_key_type = target_key_type
-#         self.key_name = key_name
-
-#         # Automatically calculate same_view, same_database, and same_server
-#         self.same_server = source.server == target.server
-#         self.same_database = self.same_server and source.database == target.database
-#         self.same_view = self.same_database and source.view == target.view
-
-#         # Set edge attributes based on metadata
-#         self.attr['label'] = key_name
-#         self.attr['color'] = 'blue' if self.same_server else 'red'
-#         self.attr['style'] = 'solid' if self.same_database else 'dashed'
-
-# class TableNode(pgv.Node):
-#     def __init__(self, graph: pgv.AGraph, dd_for: str, keys=[], url=None, **attr):
-#         super().__init__(graph, dd_for)
-#         self.attr.update(attr)
-
-#         # Table naming convention: [server].[database].[view].[table]
-#         names = dd_for[1:-1].split('].[') # Convert bracketed names to list
-#         self.server = names[0]
-#         self.database = names[1]
-#         self.view = names[2]
-#         self.table = names[3]
-
-#         # Key information
-#         self.keys = keys
-#         self.url = url
-
-#         # Set node attributes
-#         self.attr['shape'] = 'box'
-#         self.attr['style'] = 'filled'
-#         self.attr['fillcolor'] = 'lightblue'
-#         self.attr['label'] = f"{self.table}\n{', '.join(self.keys.keys())}"
-#         if url:
-#             self.attr['URL'] = url
-
-
+# List all excel files in a given directory
 def list_files(directory, extension=".xlsx"):
     path = Path(directory)
     return [
@@ -127,6 +104,7 @@ def list_files(directory, extension=".xlsx"):
     ]
 
 
+# Load the data dictionary information from the excel files
 def load_json_data(file_paths):
     data = []
     for file_path in file_paths:
@@ -136,6 +114,147 @@ def load_json_data(file_paths):
         data_dict = json.loads(json_str)
         data.append(data_dict)
     return data
+
+
+# Group the data dictionary information by database
+def format_json_data(raw_data):
+    formatted_data = {}
+    for dd in raw_data:
+        dd_for = dd['Data Dictionary For']
+        # Table naming convention: [server].[database].[view].[table]
+        names = dd_for[1:-1].split('].[')  # Convert bracketed names to list
+        server = names[0]
+        database = names[1]
+        view = names[2]
+        table = names[3]
+        if database not in formatted_data:
+            formatted_data[database] = []
+        formatted_data[database].append(dd)
+
+    return formatted_data
+
+
+# Generate a list of colors
+def generate_colors():
+    colors = [
+        "lightpink",
+        "lightgoldenrod",
+        "lightblue",
+        "lightgreen",
+        "lightred",
+        "lightorange",
+        "lightyellow",
+        "lightpurple",
+        "lightcyan",
+        "lightbrown",
+        "lightgray",
+    ]
+    return colors
+
+
+def fill_keys(json_data):
+    '''
+    Fill in missing foreign keys in the data dictionary information.
+
+    Args:
+        json_data (list of dict): List of dictionaries containing data dictionary information
+    
+    Returns:
+        json_data (list of dict): List of dictionaries containing data dictionary information with filled in foreign keys
+    '''
+    # Dictionary to hold all master keys with their types and tables
+    master_keys = {}
+    for data_dict in json_data:
+        for variable in data_dict['Data Dictionary']:
+            key_str = variable['Key Information']
+            if key_str == '':
+                continue
+            master_strs = ['MPK', 'MUK', 'MEK']
+            is_master = any(master_str in key_str
+                            for master_str in master_strs)
+            if is_master:
+                key_type = key_str[1:3]
+            else:
+                continue
+            '''
+            If the key information has a colon and a space, then the key maps to a different key name.
+            The global name is the key name that the key maps to.
+            '''
+            if ': ' in variable['Key Information']:
+                global_name = variable['Key Information'].split(': ')[1]
+            else:
+                global_name = variable['Field Name']
+            mk = Key(global_name, variable['Field Name'], key_type, is_master,
+                     data_dict['Data Dictionary For'])
+            master_keys[global_name] = mk
+
+    # add the master composite keys
+    master_comp_keys = {}
+    for data_dict in json_data:
+        table_MCKs = defaultdict(list)
+        for variable in data_dict['Data Dictionary']:
+            key_str = variable['Key Information']
+            if key_str == '':
+                continue
+            re_str = r"M[PUK]K\d{1}"
+            search_obj = re.search(re_str, key_str)
+            if search_obj:
+                match = search_obj.group()
+                table_MCKs[match].append(variable['Field Name'])
+        for key, fields in table_MCKs.items():
+            type = key[1:3]
+            is_master = True
+            global_names = frozenset(fields)
+            mck = CompositeKey(global_names, type, is_master,
+                               data_dict['Data Dictionary For'])
+            master_comp_keys[global_names] = mck
+
+    # Fill in missing foreign keys
+    for data_dict in json_data:
+        for variable in data_dict['Data Dictionary']:
+            key_str = variable['Key Information']
+            col_name = variable['Field Name']
+            if key_str == '':
+                # ks = master_keys.keys().tolist()
+                match = next((key for key in master_keys.keys()
+                              if key.lower() == col_name.lower()), None)
+                if match:
+                    if master_keys[match].type == 'PK' or master_keys[
+                            match] == 'UK':
+                        variable['Key Information'] = 'FK'
+                    elif master_keys[match].type == 'EK':
+                        variable['Key Information'] = 'EK'
+
+    # Fill in missing composite keys
+    for data_dict in json_data:
+        # Get a set of all the fields in the data dictionary
+        fields = set()
+        present_CKs = set()
+        count = 1
+        for variable in data_dict['Data Dictionary']:
+            fields.add(variable['Field Name'])
+        lower_fields = set(field.lower() for field in fields)
+        for MCK in master_comp_keys.keys():
+            lower_MCK = set(c.lower() for c in MCK)
+            if lower_MCK.issubset(lower_fields):
+                present_CKs.add(MCK)
+        for variable in data_dict['Data Dictionary']:
+            key_str = variable['Key Information']
+            col_name = variable['Field Name']
+            if key_str == '':
+                for CK in present_CKs:
+                    if col_name.lower() in CK:
+                        if master_comp_keys[
+                                CK].type == 'PK' or master_comp_keys[
+                                    CK] == 'UK':
+                            variable['Key Information'] = f'FK{count}'
+                        elif master_comp_keys[CK].type == 'EK':
+                            variable['Key Information'] = f'EK{count}'
+                        count += 1
+
+    master_keys.update(master_comp_keys)
+
+    return json_data, master_keys
 
 
 def build_graph(json_data):
@@ -152,54 +271,128 @@ def build_graph(json_data):
     start by mapping PKs and UKs to FKs in external tables. PKs and UKs should map to PKs, UKs of the same
     name in external tables
     '''
+    # Fill in missing foreign keys
+    json_data, master_keys = fill_keys(json_data)
 
+    # Format the data dictionary information
+    data = format_json_data(json_data)
+
+    # Initialize the graph and subgraphs
     G = pgv.AGraph(strict=True, directed=False)
+    subgraphs = {}
+    color_map = {}
+    color_list = generate_colors()
+    for i, database in enumerate(data):
+        color_map[database] = color_list[i]
 
-    # Dictionary to hold all field names, PK/UK/EK names and their respective tables
-    field_dict = defaultdict(list)
+    for i, database in enumerate(data):
+        subgraph = G.add_subgraph(name=database,
+                                  label=database,
+                                  color=color_map[database].replace(
+                                      'light', ''))
+        subgraph.node_attr["fillcolor"] = color_map[database]
+        subgraphs[database] = subgraph
+
+    # key_dict is a dictionary for each shared key. The key name is the global name of the key and the value
+    # is a tuple of the master table/key and a list of the child tables/keys. e.g. {key_name: (master_key, [child_key1, child_key2])}
+    key_dict = defaultdict(lambda: (None, []))
+    # initialize key_dict with master keys
+    for global_name, master_key in master_keys.items():
+        key_dict[global_name] = (master_key, [])
+
     table_nodes = {}
 
-    # Find all field names, UKs (UK or PK) and EKs and their respective tables
-    for data_dict in json_data:
-        table_name = data_dict['Data Dictionary For']
-        keys = []
-        for variable in data_dict['Variables']:
-            if variable['Key Information'] == '':
-                continue
-            key_type = variable['Key Information'][0:2]
-            if key_type not in ['PK', 'UK', 'EK', 'FK']:
-                continue
-            local_name = variable['Column Name']
-            '''
-            If the key information has a colon and a space, then the key maps to a different key name.
-            The global name is the key name that the key maps to.
-            '''
-            if ': ' in variable['Key Information']:
-                global_name = variable['Key Information'].split(': ')[1]
-            else:
-                global_name = local_name
-            field_dict[global_name].append((table_name, local_name, key_type))
-            key = Key(global_name, local_name, key_type)
-            keys.append(key)
-        node = TableNode(G, table_name, keys)
-        table_nodes[table_name] = node
-        # G.add_node(node)
+    # Add nodes to the graph and fill in key_dict
+    for database, dd_list in data.items():
+        for dd in dd_list:
+            dd_for = dd['Data Dictionary For']
+            table_keys = []
+            for variable in dd['Data Dictionary']:
+                local_name = variable['Field Name']
+                key_str = variable['Key Information']
+                if key_str == '':
+                    continue
+                master_strs = ['MPK', 'MUK', 'MEK']
+                is_master = any(master_str in key_str
+                                for master_str in master_strs)
+                if is_master:
+                    key_type = key_str[1:3]
+                else:
+                    key_type = key_str[0:2]
+                '''
+                If the key information has a colon and a space, then the key maps to a different key name.
+                The global name is the key name that the key maps to.
+                '''
+                if ': ' in variable['Key Information']:
+                    global_name = variable['Key Information'].split(': ')[1]
+                else:
+                    global_name = local_name
+                key = Key(global_name, local_name, key_type, is_master, dd_for)
+                table_keys.append(key)
+                if not is_master:
+                    key_dict[global_name][1].append(key)
 
-    # Add edges to the graph
-    for global_key, tables in field_dict.items():
-        for table, _, key_type in tables:
-            for other_table, _, other_key_type in field_dict[global_key]:
-                if table != other_table:
-                    source_node = table_nodes[table]
-                    target_node = table_nodes[other_table]
+            node = TableNode(subgraphs[database], dd_for, table_keys)
+            table_nodes[dd_for] = node
 
-                    edge = TableEdge(graph=G,
-                                     source=source_node,
-                                     target=target_node,
-                                     source_key_type=key_type,
-                                     target_key_type=other_key_type,
-                                     key_name=global_key)
-                    # G.add_edge(source_node, target_node, object=edge)
+    # Add composite keys to key_dict
+    for database, dd_list in data.items():
+        for dd in dd_list:
+            dd_for = dd['Data Dictionary For']
+            table_keys = defaultdict(set)
+            for variable in dd['Data Dictionary']:
+                key_str = variable['Key Information']
+                re_str = r"M?[PUK]K\d"
+                search_obj = re.search(re_str, key_str)
+                if search_obj:
+                    match = search_obj.group()
+                    table_keys[match].add(variable['Field Name'])
+            for key_info, fields in table_keys.items():
+                if key_info[0] == 'M':
+                    type = key_info[1:3]
+                    is_master = True
+                else:
+                    type = key_info[0:2]
+                    is_master = False
+                global_names = frozenset(fields)
+                comp_key = CompositeKey(global_names, type, is_master, dd_for)
+                if not is_master:
+                    key_dict[global_names][1].append(comp_key)
+                G.get_node(dd_for).add_key(comp_key)
+    '''
+    Drawing edges rules:
+    A master table for a particular key is a table that has the master key for that key.
+    A child table for a particular key is a table that has that key but it is not a master key.
+    For each key, we want to draw edges from the master table to the child tables.
+    
+    '''
+    for global_name, (master_key, child_keys) in key_dict.items():
+        if not master_key:
+            continue
+        source = table_nodes[master_key.dd_for]
+        for child_key in child_keys:
+            target = table_nodes[child_key.dd_for]
+            edge = TableEdge(G, source, target, master_key, child_key)
+
+    # Scale nodes based on the number of edges
+    for node in G.nodes():
+        node.attr['width'] = 0.2 + 0.02 * len(G.neighbors(node))
+        node.attr['height'] = node.attr['width']
+
+    # Set subgraph attributes
+    for subgraph in G.subgraphs():
+        print(subgraph.name)
+        subgraph.graph_attr['bgcolor'] = 'blue'
+        for node in subgraph.nodes():
+            node.attr['shape'] = 'circle'
+            node.attr['style'] = 'filled'
+            node.attr['fillcolor'] = subgraph.node_attr['fillcolor']
+            node.attr['color'] = 'black'
+
+    # Manage graph layout
+    G.layout(prog='dot')
+    G.graph_attr['overlap'] = 'false'  # Prevent overlapping nodes
+    G.graph_attr['splines'] = 'true'  # Draw curved edges
 
     return G
 
@@ -249,20 +442,22 @@ def search_fields(json_data,
 
 
 if __name__ == "__main__":
-    files = list_files('data/SQLPROD01')
-    for file in files:
-        if '.docx' in file:
-            files.remove(file)
+    if not Path('results').exists():
+        Path('results').mkdir()
+
+    directories = ['data\\SQLPROD01\\MARSS', 'data\\SQLPROD01\\MDEORG']
+    files = []
+    for directory in directories:
+        files.extend(list_files(directory))
     # print(files)
     json_data = load_json_data(files)
-    matching_fields = search_fields(json_data, ['StatusEndCode'])
-    if len(matching_fields) == 0:
-        print('No matching fields found')
-    for field in matching_fields:
-        print(field)
+    with open('results\\MDEORG.json', 'w') as f:
+        json.dump(json_data, f, indent=4)
+    # matching_fields = search_fields(json_data, ['StatusEndCode'])
+    # if len(matching_fields) == 0:
+    #     print('No matching fields found')
+    # for field in matching_fields:
+    #     print(field)
 
-    # G = build_graph(json_data)
-    # G.layout(prog='dot')
-    # G.draw('MDEORG.png')
-    # for nodes in G.nodes():
-    # print(nodes)
+    G = build_graph(json_data)
+    G.draw('results\\MDEORG.svg', format='svg')
