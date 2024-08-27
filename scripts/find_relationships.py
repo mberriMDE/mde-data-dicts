@@ -6,6 +6,7 @@ from json_excel_conversion import dd_json_to_excel, dd_excel_to_json
 import networkx as nx
 import pygraphviz as pgv
 import re
+import urllib.parse
 
 
 class Key:
@@ -14,6 +15,8 @@ class Key:
                  is_master: bool, dd_for: str):
         self.global_name = global_name
         self.local_name = local_name
+        self.global_label = global_name
+        self.local_label = local_name
         self.type = type
         self.is_master = is_master
         self.dd_for = dd_for
@@ -21,12 +24,17 @@ class Key:
 
 class CompositeKey:
 
-    def __init__(self, global_names: frozenset, type: str, is_master: bool,
+    def __init__(self, key_set: frozenset[Key], type: str, is_master: bool,
                  dd_for: str):
-        self.global_name = global_names
+        self.keys = key_set
+        self.global_names = frozenset([g.global_name for g in key_set])
+        self.local_names = frozenset([l.local_name for l in key_set])
+        self.global_label = '{' + ', '.join(self.global_names) + '}'
+        self.local_label = '{' + ', '.join(self.local_names) + '}'
         self.type = type
         self.is_master = is_master
         self.dd_for = dd_for
+        self.dict = {key.global_name: key for key in key_set}
 
 
 class TableNode:
@@ -35,7 +43,6 @@ class TableNode:
         self.subgraph = subgraph
         self.dd_for = dd_for
         self.keys = keys
-        self.url = url
         self.attr = attr
 
         # Table naming convention: [server].[database].[view].[table]
@@ -44,6 +51,17 @@ class TableNode:
         self.database = names[1]
         self.view = names[2]
         self.table = names[3]
+
+        # Set the url to the SharePoint page for the table if not provided
+        '''
+        URL Example:
+        https://mn365.sharepoint.com/:x:/r/teams/MDE/DataDictionaries/Shared%20Documents/SQLPROD01/MDEORG/apicurrent/MDEORG.apicurrent.AddressType_data_dict.xlsx?web=1
+        '''
+        if url is None:
+            url = f'https://mn365.sharepoint.com/:x:/r/teams/MDE/DataDictionaries/Shared%20Documents/{self.server}/{self.database}/{self.view}/{self.database}.{self.view}.{self.table}_data_dict.xlsx?web=1'
+        # url = "https://mn365.sharepoint.com/:x:/r/teams/MDE/DataDictionaries/Shared%20Documents/EDU-SQLPROD01/MDEORG/apicurrent/MDEORG.apicurrent.AddressType_data_dict.xlsx?web=1"
+        encoded_url = urllib.parse.quote(url, safe='/:?&=%.')
+        self.url = encoded_url
 
         # Create the node in the graph
         self.node = self.subgraph.add_node(dd_for, **self.attr)
@@ -55,12 +73,18 @@ class TableNode:
         # print(dd_for)
         # print(self.subgraph.get_node(dd_for).attr['fillcolor'])
         self.subgraph.get_node(dd_for).attr['color'] = 'black'
-        self.subgraph.get_node(dd_for).attr['label'] = self.table
-        if url:
-            self.subgraph.get_node(dd_for).attr['URL'] = url
+        self.subgraph.get_node(dd_for).attr['label'] = ''
+        self.subgraph.get_node(
+            dd_for).attr['tooltip'] = f'{self.view}.{self.table}'
+        self.subgraph.get_node(dd_for).attr['URL'] = self.url
+        print(self.subgraph.get_node(dd_for).attr['URL'])
 
     def add_key(self, key):
         self.keys.append(key)
+
+    def set_url(self, url):
+        self.url = url
+        self.subgraph.get_node(self.dd_for).attr['URL'] = url
 
 
 class TableEdge:
@@ -82,8 +106,10 @@ class TableEdge:
         # Create the edge in the graph
         self.edge = self.graph.add_edge(graph.get_node(source.dd_for),
                                         graph.get_node(target.dd_for),
+                                        dir="back",
                                         **self.attr)
 
+        tooltip = f'{source.dd_for}.[{source_key.local_label}]\n <- {target.dd_for}.[{target_key.local_label}]'
         # Set edge attributes based on metadata
         # self.graph.get_edge(
         #     source.dd_for,
@@ -94,6 +120,8 @@ class TableEdge:
         self.graph.get_edge(
             source.dd_for, target.dd_for
         ).attr['style'] = 'solid' if self.same_database else 'dashed'
+        self.graph.get_edge(source.dd_for,
+                            target.dd_for).attr['tooltip'] = tooltip
 
 
 # List all excel files in a given directory
@@ -139,25 +167,25 @@ def generate_colors():
     colors = [
         "lightpink",
         "lightgoldenrod",
-        "lightblue",
-        "lightgreen",
-        "lightred",
-        "lightorange",
-        "lightyellow",
-        "lightpurple",
-        "lightcyan",
-        "lightbrown",
-        "lightgray",
+        "palegreen",
+        "coral",
+        "orchid1",
+        "lightsalmon",
+        "plum",
+        "seashell3",
+        "mistyrose",
+        "lavender",
     ]
     return colors
 
 
-def fill_keys(json_data):
+def fill_keys(json_data, generate_excel=True):
     '''
     Fill in missing foreign keys in the data dictionary information.
 
     Args:
         json_data (list of dict): List of dictionaries containing data dictionary information
+        generate_excel (bool): If True, generate new excel files with filled in foreign keys and composite keys in filled\\
     
     Returns:
         json_data (list of dict): List of dictionaries containing data dictionary information with filled in foreign keys
@@ -166,14 +194,20 @@ def fill_keys(json_data):
     master_keys = {}
     for data_dict in json_data:
         for variable in data_dict['Data Dictionary']:
-            key_str = variable['Key Information']
-            if key_str == '':
+            key_info = variable['Key Information']
+            if key_info == '':
                 continue
-            master_strs = ['MPK', 'MUK', 'MEK']
-            is_master = any(master_str in key_str
-                            for master_str in master_strs)
-            if is_master:
-                key_type = key_str[1:3]
+            re_str = r"M[PUE]K\d?"
+            search_obj = re.search(re_str, key_info)
+            if search_obj:
+                match = search_obj.group()
+                if re.search(r"\d", match) is not None:
+                    continue  # Skip composite keys
+                if match[0] == 'M':
+                    key_type = match[1:3]
+                    is_master = True
+                else:
+                    continue
             else:
                 continue
             '''
@@ -191,36 +225,53 @@ def fill_keys(json_data):
     # add the master composite keys
     master_comp_keys = {}
     for data_dict in json_data:
-        table_MCKs = defaultdict(list)
+        dd_for = data_dict['Data Dictionary For']
+        table_MCKs = defaultdict(
+            list
+        )  # the key_info string is the key, the value is a list of subkeys that make up the composite key
         for variable in data_dict['Data Dictionary']:
-            key_str = variable['Key Information']
-            if key_str == '':
+            key_info = variable['Key Information']
+            if key_info == '':
                 continue
-            re_str = r"M[PUK]K\d{1}"
-            search_obj = re.search(re_str, key_str)
+            re_str = r"M[PUE]K\d"
+            search_obj = re.search(re_str, key_info)
             if search_obj:
                 match = search_obj.group()
-                table_MCKs[match].append(variable['Field Name'])
-        for key, fields in table_MCKs.items():
-            type = key[1:3]
+                is_master = True
+                type = match[1:3]
+                local_name = variable['Field Name']
+                if ':' in key_info:
+                    global_name = key_info.split(':')[1].strip()
+                else:
+                    global_name = local_name
+                subkey = Key(global_name, local_name, type, is_master, dd_for)
+                table_MCKs[match].append(subkey)
+
+        for key_info, subkeys in table_MCKs.items():
+            type = key_info[1:3]
             is_master = True
-            global_names = frozenset(fields)
-            mck = CompositeKey(global_names, type, is_master,
-                               data_dict['Data Dictionary For'])
-            master_comp_keys[global_names] = mck
+            key_set = set()
+            for subkey in subkeys:
+                key_set.add(subkey)
+            master_comp_key = CompositeKey(frozenset(key_set), type, is_master,
+                                           dd_for)
+            master_comp_keys[master_comp_key.global_names] = master_comp_key
 
     # Fill in missing foreign keys
     for data_dict in json_data:
         for variable in data_dict['Data Dictionary']:
-            key_str = variable['Key Information']
+            key_info = variable['Key Information']
             col_name = variable['Field Name']
-            if key_str == '':
+            if len(key_info) > 0:
+                if key_info[0] == 'M':  # Skip master keys
+                    continue
+            if ':' not in key_info:
                 # ks = master_keys.keys().tolist()
                 match = next((key for key in master_keys.keys()
                               if key.lower() == col_name.lower()), None)
                 if match:
                     if master_keys[match].type == 'PK' or master_keys[
-                            match] == 'UK':
+                            match].type == 'UK':
                         variable['Key Information'] = 'FK'
                     elif master_keys[match].type == 'EK':
                         variable['Key Information'] = 'EK'
@@ -228,36 +279,71 @@ def fill_keys(json_data):
     # Fill in missing composite keys
     for data_dict in json_data:
         # Get a set of all the fields in the data dictionary
-        fields = set()
-        present_CKs = set()
+        subkeys = set()
+        present_comp_keys = defaultdict(set)
         count = 1
         for variable in data_dict['Data Dictionary']:
-            fields.add(variable['Field Name'])
-        lower_fields = set(field.lower() for field in fields)
-        for MCK in master_comp_keys.keys():
-            lower_MCK = set(c.lower() for c in MCK)
-            if lower_MCK.issubset(lower_fields):
-                present_CKs.add(MCK)
+            subkeys.add(variable['Field Name'])
+            # Add the global names if they exist
+            splut = variable['Key Information'].split(':')
+            if len(splut) > 1:
+                subkeys.add(splut[1].strip())
+        lower_subkeys = set(subkey.lower() for subkey in subkeys)
+        for mck_names in master_comp_keys.keys():
+            lower_mck_names = set(c.lower() for c in mck_names)
+            if lower_mck_names.issubset(lower_subkeys):
+                present_comp_keys[mck_names] = count
+                count += 1
         for variable in data_dict['Data Dictionary']:
-            key_str = variable['Key Information']
+            key_info = variable['Key Information']
             col_name = variable['Field Name']
-            if key_str == '':
-                for CK in present_CKs:
-                    if col_name.lower() in CK:
+            if len(key_info) > 0:
+                if key_info[0] == 'M':
+                    continue
+            if key_info == '' or ':' not in key_info:  # Check if the local name is in the composite key
+                for comp_key_names in present_comp_keys:
+                    comp_key_names_lower = set(c.lower()
+                                               for c in comp_key_names)
+                    if col_name.lower() in comp_key_names_lower:
                         if master_comp_keys[
-                                CK].type == 'PK' or master_comp_keys[
-                                    CK] == 'UK':
-                            variable['Key Information'] = f'FK{count}'
-                        elif master_comp_keys[CK].type == 'EK':
-                            variable['Key Information'] = f'EK{count}'
-                        count += 1
+                                comp_key_names].type == 'PK' or master_comp_keys[
+                                    comp_key_names] == 'UK':
+                            variable[
+                                'Key Information'] = f'FK{present_comp_keys[comp_key_names]}'
+                        elif master_comp_keys[comp_key_names].type == 'EK':
+                            variable[
+                                'Key Information'] = f'EK{present_comp_keys[comp_key_names]}'
+            if ':' in key_info:  # Check if the global name is in the composite key
+                global_name = key_info.split(':')[1].strip()
+                for comp_key_names in present_comp_keys:
+                    comp_key_names_lower = set(c.lower()
+                                               for c in comp_key_names)
+                    if global_name.lower() in comp_key_names_lower:
+                        if master_comp_keys[
+                                comp_key_names].type == 'PK' or master_comp_keys[
+                                    comp_key_names] == 'UK':
+                            variable[
+                                'Key Information'] = f'FK{present_comp_keys[comp_key_names]}'
 
     master_keys.update(master_comp_keys)
+
+    if generate_excel:
+        for data_dict in json_data:
+            dd_for = data_dict['Data Dictionary For']
+            names = dd_for[1:-1].split('].[')
+            server = names[0]
+            database = names[1]
+            view = names[2]
+            table = names[3]
+            dd_json_to_excel(
+                json.dumps(data_dict, indent=4),
+                f'filled\\{server}\\{database}\\{view}\\{database}.{view}.{table}_data_dict.xlsx'
+            )
 
     return json_data, master_keys
 
 
-def build_graph(json_data):
+def build_graph(json_data, draw_path):
     '''
     Parameters: json_data (list of dictionaries): List of dictionaries containing data dictionary information
     Returns: G: A directed graph where each node is a table and each edge is a foreign key relationship.
@@ -278,7 +364,7 @@ def build_graph(json_data):
     data = format_json_data(json_data)
 
     # Initialize the graph and subgraphs
-    G = pgv.AGraph(strict=True, directed=False)
+    G = pgv.AGraph(strict=False, directed=True)
     subgraphs = {}
     color_map = {}
     color_list = generate_colors()
@@ -286,7 +372,7 @@ def build_graph(json_data):
         color_map[database] = color_list[i]
 
     for i, database in enumerate(data):
-        subgraph = G.add_subgraph(name=database,
+        subgraph = G.add_subgraph(name=f'cluster_{database}',
                                   label=database,
                                   color=color_map[database].replace(
                                       'light', ''))
@@ -312,21 +398,41 @@ def build_graph(json_data):
                 key_str = variable['Key Information']
                 if key_str == '':
                     continue
-                master_strs = ['MPK', 'MUK', 'MEK']
-                is_master = any(master_str in key_str
-                                for master_str in master_strs)
-                if is_master:
-                    key_type = key_str[1:3]
+                re_str = r"M?[PUEF]K\d?"
+                search_obj = re.search(re_str, key_str)
+                key_type = None
+                if search_obj:
+                    match = search_obj.group()
+                    if re.match(r"\d", match[-1]):
+                        continue  # Skip composite keys
+                    if match[0] == 'M':
+                        key_type = match[1:3]
+                        is_master = True
+                    else:
+                        key_type = match[0:2]
+                        is_master = False
                 else:
-                    key_type = key_str[0:2]
+                    continue
+                if key_type is None:
+                    print(
+                        f'ERROR: Key type {key_str} in {dd_for}.[{local_name}] not found'
+                    )
                 '''
                 If the key information has a colon and a space, then the key maps to a different key name.
                 The global name is the key name that the key maps to.
                 '''
-                if ': ' in variable['Key Information']:
-                    global_name = variable['Key Information'].split(': ')[1]
+                if ':' in variable['Key Information']:
+                    global_name = variable['Key Information'].split(
+                        ':')[1].strip()
                 else:
                     global_name = local_name
+
+                # If the global name in the key dict has different case, then use the global name in the key dict
+                for key in key_dict.keys():
+                    if global_name.lower() == key.lower():
+                        global_name = key
+                        break
+
                 key = Key(global_name, local_name, key_type, is_master, dd_for)
                 table_keys.append(key)
                 if not is_master:
@@ -339,26 +445,39 @@ def build_graph(json_data):
     for database, dd_list in data.items():
         for dd in dd_list:
             dd_for = dd['Data Dictionary For']
-            table_keys = defaultdict(set)
+            table_keys = defaultdict(set[Key])
             for variable in dd['Data Dictionary']:
                 key_str = variable['Key Information']
-                re_str = r"M?[PUK]K\d"
+                re_str = r"M?[PUEF]K\d"
                 search_obj = re.search(re_str, key_str)
                 if search_obj:
                     match = search_obj.group()
-                    table_keys[match].add(variable['Field Name'])
-            for key_info, fields in table_keys.items():
+                    if match[0] == 'M':
+                        continue
+                    else:
+                        key_type = match[0:2]
+                        is_master = False
+                    local_name = variable['Field Name']
+                    if ':' in key_str:
+                        global_name = key_str.split(':')[1].strip()
+                    else:
+                        global_name = local_name
+                    table_keys[match].add(
+                        Key(global_name, local_name, key_type, is_master,
+                            dd_for))
+
+            for key_info, keys in table_keys.items():
                 if key_info[0] == 'M':
-                    type = key_info[1:3]
+                    key_type = key_info[1:3]
                     is_master = True
                 else:
-                    type = key_info[0:2]
+                    key_type = key_info[0:2]
                     is_master = False
-                global_names = frozenset(fields)
-                comp_key = CompositeKey(global_names, type, is_master, dd_for)
                 if not is_master:
+                    comp_key = CompositeKey(keys, key_type, is_master, dd_for)
+                    global_names = comp_key.global_names
                     key_dict[global_names][1].append(comp_key)
-                G.get_node(dd_for).add_key(comp_key)
+                table_nodes[dd_for].add_key(comp_key)
     '''
     Drawing edges rules:
     A master table for a particular key is a table that has the master key for that key.
@@ -367,7 +486,7 @@ def build_graph(json_data):
     
     '''
     for global_name, (master_key, child_keys) in key_dict.items():
-        if not master_key:
+        if not master_key or not child_keys:
             continue
         source = table_nodes[master_key.dd_for]
         for child_key in child_keys:
@@ -381,8 +500,7 @@ def build_graph(json_data):
 
     # Set subgraph attributes
     for subgraph in G.subgraphs():
-        print(subgraph.name)
-        subgraph.graph_attr['bgcolor'] = 'blue'
+        # subgraph.graph_attr['bgcolor'] = 'mintcream'
         for node in subgraph.nodes():
             node.attr['shape'] = 'circle'
             node.attr['style'] = 'filled'
@@ -393,6 +511,17 @@ def build_graph(json_data):
     G.layout(prog='dot')
     G.graph_attr['overlap'] = 'false'  # Prevent overlapping nodes
     G.graph_attr['splines'] = 'true'  # Draw curved edges
+    G.graph_attr['K'] = '2'  # Increase the spring constant
+    # G.graph_attr['bgcolor'] = 'mintcream'
+    G.graph_attr['clusterrank'] = 'local'
+
+    G.draw(draw_path, format='svg')
+    # Remove the extraneous '\' and '\n' characters from the SVG file. Not sure why they are there.
+    with open(draw_path, 'r') as f:
+        svg = f.read()
+    svg = svg.replace('\\\n', '')
+    with open(draw_path, 'w') as f:
+        f.write(svg)
 
     return G
 
@@ -449,7 +578,6 @@ if __name__ == "__main__":
     files = []
     for directory in directories:
         files.extend(list_files(directory))
-    # print(files)
     json_data = load_json_data(files)
     with open('results\\MDEORG.json', 'w') as f:
         json.dump(json_data, f, indent=4)
@@ -459,5 +587,6 @@ if __name__ == "__main__":
     # for field in matching_fields:
     #     print(field)
 
-    G = build_graph(json_data)
-    G.draw('results\\MDEORG.svg', format='svg')
+    G = build_graph(json_data, 'results\\subgraphs.svg')
+
+    # json_data, master_keys = fill_keys(json_data)

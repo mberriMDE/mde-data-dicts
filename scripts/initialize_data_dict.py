@@ -24,6 +24,7 @@ def initialize_data_dict(server_name,
         database_name (str): The name of the database where the table is located.
         view_name (str): The name of the view where the table is located.
         table_name (str): The name of the table to generate the data dictionary for.
+        data_dict (dict, optional): A dictionary containing the data dictionary for the specified table, if available. Defaults to None.
 
     Returns:
         dict: A dictionary representing the data dictionary in json format for the specified table.

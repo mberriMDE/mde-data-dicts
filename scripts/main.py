@@ -3,35 +3,45 @@ from custom_cols import get_col_headers
 from initialize_data_dict import *
 
 if __name__ == "__main__":
-    directories = ['data\\RDMESSA']
-    files = []
-    for directory in directories:
-        files.extend(list_files(directory))
-    # Remove non from the list
-    files = [file for file in files if '_data_dict.xlsx' in file]
+    ### STANDARDIZE EXCEL FILES
+    # directories = ['data\\RDMESSA']
+    # files = []
+    # for directory in directories:
+    #     files.extend(list_files(directory))
+    # # Remove non from the list
+    # files = [file for file in files if '_data_dict.xlsx' in file]
 
-    # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
+    # # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
 
-    database_name = 'DIRS'
-    for file in files:
-        # directory = "\\".join(file.split("\\")[0:-1])
-        # names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
-        # database_name = names[0]
-        # find_codes = True if database_name in ['ESSA', 'DIRS'] else False
+    # database_name = 'DIRS'
+    # for file in files:
+    #     # directory = "\\".join(file.split("\\")[0:-1])
+    #     # names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
+    #     # database_name = names[0]
+    #     # find_codes = True if database_name in ['ESSA', 'DIRS'] else False
 
-        standardize_excel(file,
-                          file.replace(directory, directory + '2'),
-                          make_json=False,
-                          find_codes=True,
-                          order_codes=True,
-                          maintain_columns=True,
-                          custom_col_names=get_col_headers(database_name))
+    #     standardize_excel(file,
+    #                       file.replace(directory, directory + '2'),
+    #                       make_json=False,
+    #                       find_codes=True,
+    #                       order_codes=True,
+    #                       maintain_columns=True,
+    #                       custom_col_names=get_col_headers(database_name))
 
-    # for file in tqdm(files, desc='Standardizing Excel files'):
-    #     directory = "\\".join(file.split("\\")[0:-1])
-    #     if not os.path.exists(directory.replace('SQLPROD01', 'SQLPROD01_Standardized')):
-    #         os.makedirs(directory.replace('SQLPROD01', 'SQLPROD01_Standardized'))
-    #     standardize_excel(file, file.replace('SQLPROD01', 'SQLPROD01_Standardized'), make_json=False, find_codes=False, order_codes=False)
+    ### INITIALIZE DATA DICTIONARIES
+    # Read in the table names
+    with open('data\\carl_perkins_tables.txt') as f:
+        tables = [line.strip() for line in f]
 
-    # file = 'oMDEORG.apilegacy.DBORGUNIT_data_dict.xlsx'
-    # standardize_excel(file, file[1:], make_json=False, find_codes=True, order_codes=True)
+    server = 'EDU-SQLPROD01'
+    database = 'Carl_Perkins'
+    view = 'dbo'
+
+    for table in tables:
+        data_dict = initialize_data_dict(server, database, view, table)
+        json_data = json.dumps(data_dict, indent=4)
+        file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"
+        os.makedirs(os.path.dirname(file_name), exist_ok=True)
+        dd_json_to_excel(json_data,
+                         file_name,
+                         custom_col_names=get_col_headers(database))
