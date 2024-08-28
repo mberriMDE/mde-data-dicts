@@ -368,6 +368,9 @@ def dd_json_to_excel(data,
         worksheet_info.write('A1', 'Data Dictionary For:', bold_format)
         worksheet_info.write('A2', data['Data Dictionary For'], text_format)
 
+        # Write "Table Type" information
+        worksheet_info.write('A3', f'({data['Table Type']})', bold_format)
+
         # Write FAQ data starting from the 4th row
         if not df_faqs.empty:
             for idx, (faq, resp) in enumerate(zip(df_faqs['FAQ'],
@@ -534,171 +537,6 @@ def dd_json_to_excel(data,
                 worksheet_ac.write_formula(cell, formula, hyperlink_format)
 
 
-def old_dd_excel_to_json(input_file, maintain_columns=False):
-    """
-    Convert a data dictionary Excel file to a JSON string.
-
-    Args:
-        input_file (str): The path to the input Excel file.
-
-    Returns:
-        str: A JSON string representing the data dictionary.
-    """
-    # Define the column names for each sheet
-    meta_column_names = {
-        'Legend': ['Data Dictionary Column Name', 'Description'],
-        'Info and Uses': ['FAQ', 'Response'],
-        'Relationships': [
-            'Field Name in This Table', 'Relationship', 'External Table Name',
-            'Field Name in External Table', 'Notes'
-        ],
-        'Data Dictionary': [
-            'Field Name',
-            'Description',
-            'Reporting Status',
-            'Introduced',
-            'Discontinued',
-            'Acceptable Values',
-            'Null Meaning',
-            'Data Type',
-            'Variable Length',
-            'Notes',
-            'Key Information',
-            'Reporting Cycle',
-            'Validations',
-            'Source Information',
-            'Raw Data Origin',
-        ],
-        'Codes': [
-            'Code', 'Description', 'Reporting Status', 'Introduced',
-            'Discontinued', 'In Data', 'Notes'
-        ]
-    }
-
-    # Load the dd workbook template
-    xl = pd.ExcelFile(input_file)
-
-    # Read the All Columns sheet
-    df_all_columns = xl.parse('All Columns')
-
-    if maintain_columns:
-        cols = df_all_columns.columns.tolist()
-        # Read the column names from the header row and use them as the column names
-        meta_column_names['All Columns'] = cols
-        # If Introduced and Discontinued columns are not present, remove them from the code column names
-        if 'Introduced' not in cols:
-            meta_column_names['Codes'].remove('Introduced')
-        if 'Discontinued' not in meta_column_names['All Columns']:
-            meta_column_names['Codes'].remove('Discontinued')
-
-    # Read the 'Info and Uses' sheet
-    df_info_uses = xl.parse('Info and Uses')
-
-    # Extract the 'Data Dictionary For' information
-    # Assuming it's in the second row, first column
-    data_dictionary_for = df_info_uses.iloc[0, 0]
-    if pd.isnull(data_dictionary_for):
-        data_dictionary_for = ""
-
-    # Extract the FAQ section
-    # Assuming FAQs start from the 4th row and the sheet has headers at the 3rd row
-    df_faqs = df_info_uses.iloc[3:].reset_index(drop=True)
-    # Setting column names
-    df_faqs.columns = meta_column_names['Info and Uses']
-
-    # Convert FAQs to a list of dictionaries
-    faq_list = df_faqs.to_dict(orient='records')
-
-    # Initialize a dictionary to hold the final data with additional metadata
-    # Note: Meta Columns are the column names for the each sheet
-    data_dictionary = {
-        'Workbook Column Names': meta_column_names,
-        'Column Descriptions': [],
-        'Data Dictionary For': data_dictionary_for,
-        'FAQs': faq_list,
-        'Relationships': [],
-        'Variables': []
-    }
-
-    # Convert the Column Description sheet to a data frame
-    df_descriptions = xl.parse('Column Descriptions')
-
-    # Convert the 'Column Description' sheet to a list of dictionaries
-    df_descriptions.columns = df_descriptions.columns.str.strip()
-    column_descriptions = df_descriptions.to_dict(orient='records')
-
-    # Append the column descriptions to the data dictionary
-    data_dictionary['Column Descriptions'] = column_descriptions
-
-    # Relationships sheet
-    try:
-        # Read the 'Relationships' sheet
-        df_relationships = xl.parse('Relationships')
-
-        # Convert the 'Relationships' sheet to a list of dictionaries
-        df_relationships.columns = df_relationships.columns.str.strip()
-        relationships = df_relationships.to_dict(orient='records')
-
-        # Append the relationships to the data dictionary
-        data_dictionary['Relationships'] = relationships
-    except:
-        data_dictionary['Relationships'] = []
-
-    # Strip the leading/trailing whitespace and remove all \n from the keys
-    df_all_columns.columns = df_all_columns.columns.str.strip().str.replace(
-        '\n', '')
-
-    # Iterate over each row in the 'All Columns' DataFrame
-    for index, row in df_all_columns.iterrows():
-        record = row.to_dict()
-
-        # Change all empty cells to "" and strip any leading/trailing whitespace.
-        for key, value in record.items():
-            if pd.isnull(value):
-                record[key] = ""
-            elif isinstance(value, str):
-                record[key] = value.strip()
-
-        # Check if the 'Acceptable Values' indicates there are codes to be read from another sheet
-        if record['Acceptable Values'] == 'Codes' or record[
-                'Acceptable Values'] == 0:
-            column_name = record['Column Name'].strip()
-
-            # Read the specific sheet for the codes, assuming it is named exactly as the 'Column Name'
-            if column_name in xl.sheet_names:
-                df_codes = xl.parse(column_name, dtype=str)
-
-                # Strip the leading/trailing whitespace and remove all \n from the keys
-                df_codes.columns = df_codes.columns.str.strip().str.replace(
-                    '\n', '')
-
-                # Convert the codes sheet into a list of dictionaries
-                codes_list = df_codes.to_dict(orient='records')
-
-                # Change all empty cells to "NULL" and strip any leading/trailing whitespace. Remove all \n
-                for code in codes_list:
-                    for key, value in code.items():
-                        if pd.isnull(value):
-                            if key == 'Code':
-                                code[key] = "NULL"
-                            else:
-                                code[key] = ""
-                        elif isinstance(value, str):
-                            code[key] = value.strip()
-
-                # Replace the 'Acceptable Values' entry with this list
-                record['Acceptable Values'] = codes_list
-            else:
-                record['Acceptable Values'] = []
-
-        # Append the modified record to the data dictionary list
-        data_dictionary['Variables'].append(record)
-
-    # Convert the list of dictionaries to JSON
-    json_output = json.dumps(data_dictionary, indent=4)
-    return json_output
-
-
 def dd_excel_to_json(input_file, maintain_columns=False):
     """
     Convert a data dictionary Excel file to a JSON string.
@@ -739,6 +577,16 @@ def dd_excel_to_json(input_file, maintain_columns=False):
     if pd.isnull(data_dictionary_for):
         data_dictionary_for = ""
 
+    # Extract the reference table information
+    # Assuming it's in the third row, first column
+    table_type = df_info_uses.iloc[2, 0]
+    if pd.isnull(table_type):
+        table_name = data_dictionary_for.split('.')[-1]
+        if 'type' in table_name.lower():
+            reference_type = "Reference Table"
+        else:
+            reference_type = "Data Table"
+
     # Extract the FAQ section
     # Assuming FAQs start from the 4th row and the sheet has headers at the 3rd row
     df_faqs = df_info_uses.iloc[3:].reset_index(drop=True)
@@ -753,6 +601,7 @@ def dd_excel_to_json(input_file, maintain_columns=False):
         'Workbook Column Names': workbook_column_names,
         'Legend': [],
         'Data Dictionary For': data_dictionary_for,
+        'Table Type': table_type,
         'FAQs': faq_list,
         'Relationships': [],
         'Data Dictionary': []
@@ -873,3 +722,14 @@ def list_files(directory, extension=".xlsx"):
     return [
         str(file) for file in path.rglob(f'*{extension}') if file.is_file()
     ]
+
+
+# main
+if __name__ == "__main__":
+    file = "data\EDU-SQLPROD01\DIRS\dbo\DIRS.dbo.AltEdServicesType_data_dict.xlsx"
+    standardize_excel(file,
+                      file + '2',
+                      make_json=False,
+                      find_codes=False,
+                      order_codes=False,
+                      maintain_columns=True)
