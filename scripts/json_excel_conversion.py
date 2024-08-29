@@ -211,12 +211,16 @@ def get_legend(data_dict_headers):
             "Key Information",
             "Description":
             "Indicates if the field is a key field for the table.\n"
-            "Primary Key (PK)\n"
-            "Foreign Key (FK)\n"
-            "Unique Key (UK)\n"
-            "Component of Composite Key # (CK#) \n"
-            "Entity Key (EK): Not necessarily unique, but identifies a specific entity in/across the databases. "
-            "For example, marrsNumber in MARSS.dbo.student is not unique across all records, but it is unique accross all students and therefore identifies a specific student. Do not use if the field is a foreign key. Foreign keys may point to an EK field, however, they should then be labelled 'FEK'.\n"
+            " - PK: Primary key\n"
+            " - UK: Unique Key\n"
+            " - FK: Foreign Key (to a primary or unique key in another table)\n"
+            " - EK: Entity Key. Not necessarily unique, but identifies a specific entity in/across the databases."
+            " For example, marrsNumber in MARSS.dbo.student is not unique across all records, but it is unique accross all students and therefore identifies a specific student."
+            " Do not use if the field is a foreign key. Foreign keys may point to an EK field, however, they should then be labelled 'FE'.\n"
+            " - One digit suffix: This suffix should be used to group composite keys (a key consisting of multiple fields). For example if field A and B have key info 'EK1'"
+            " and C and D have key info 'EK2', then there are two composite entity keys: {A, B} and {C, D}.\n"
+            " - 'S' prefix: This indicates that the key is a proper (has less information) subset of the information stored in a key in another table.\n"
+            " - 'M' prefix: This indicates that the key is the master key for that particular field. The table with the master key is what the other table non master keys for that field connect back to.\n"
             "Leave cell blank if this column is not a key field."
         },
         {
@@ -342,7 +346,7 @@ def dd_json_to_excel(data,
 
         bold_format = workbook.add_format({'bold': True})
 
-        # Legend Sheet
+        ### LEGEND SHEET
         # Standard rows for 'Legend' sheet
         column_descriptions = get_legend(
             data['Workbook Column Names']['Data Dictionary'])
@@ -360,7 +364,7 @@ def dd_json_to_excel(data,
             # Set column width to 20
             worksheet_cd.set_column(col_num, col_num, 50, text_format)
 
-        # FAQs sheet with Data Dictionary For info
+        # INFO AND USES SHEET
         df_faqs = pd.DataFrame(data['FAQs'])
         worksheet_info = workbook.add_worksheet('Info and Uses')
 
@@ -369,7 +373,7 @@ def dd_json_to_excel(data,
         worksheet_info.write('A2', data['Data Dictionary For'], text_format)
 
         # Write "Table Type" information
-        worksheet_info.write('A3', f'({data['Table Type']})', bold_format)
+        worksheet_info.write('A3', f'({data["Table Type"]})', text_format)
 
         # Write FAQ data starting from the 4th row
         if not df_faqs.empty:
@@ -392,7 +396,7 @@ def dd_json_to_excel(data,
         worksheet_info.write('A4', 'FAQ', header_format)
         worksheet_info.write('B4', 'Response', header_format)
 
-        # RELATIONSHIPS SHEET
+        ### RELATIONSHIPS SHEET
         df_relationships = pd.DataFrame(data['Relationships'])
         worksheet_relationships = workbook.add_worksheet('Relationships')
         # Write the headers with formatting
@@ -407,7 +411,7 @@ def dd_json_to_excel(data,
                 for col_num, value in enumerate(row):
                     worksheet_relationships.write(idx + 1, col_num, value)
 
-        # DATA DICTIONARY SHEET
+        ### DATA DICTIONARY SHEET
         # Required columns for 'Data Dictionary' sheet
         required_columns = data['Workbook Column Names']['Data Dictionary']
         # Initialize DataFrame for 'Data Dictionary' with required columns
@@ -556,7 +560,10 @@ def dd_excel_to_json(input_file, maintain_columns=False):
     xl = pd.ExcelFile(input_file)
 
     # Read the Data Dictionary sheet
-    df_data_dict = xl.parse('Data Dictionary')
+    try:
+        df_data_dict = xl.parse('Data Dictionary')
+    except:
+        print(f"Data Dictionary sheet not found in {input_file}")
 
     if maintain_columns:
         cols = df_data_dict.columns.tolist()
@@ -578,14 +585,14 @@ def dd_excel_to_json(input_file, maintain_columns=False):
         data_dictionary_for = ""
 
     # Extract the reference table information
-    # Assuming it's in the third row, first column
-    table_type = df_info_uses.iloc[2, 0]
+    # Assuming it's in the second row, second column
+    table_type = df_info_uses.iloc[1, 0]
     if pd.isnull(table_type):
         table_name = data_dictionary_for.split('.')[-1]
         if 'type' in table_name.lower():
-            reference_type = "Reference Table"
+            table_type = "Reference Table"
         else:
-            reference_type = "Data Table"
+            table_type = "Data Table"
 
     # Extract the FAQ section
     # Assuming FAQs start from the 4th row and the sheet has headers at the 3rd row
@@ -608,7 +615,10 @@ def dd_excel_to_json(input_file, maintain_columns=False):
     }
 
     # Convert the Legend sheet to a data frame
-    df_descriptions = xl.parse('Legend')
+    try:
+        df_descriptions = xl.parse('Legend')
+    except:
+        print(f"Legend sheet not found in {input_file}")
 
     # Convert the 'Legend' sheet to a list of dictionaries
     df_descriptions.columns = df_descriptions.columns.str.strip()
@@ -728,7 +738,7 @@ def list_files(directory, extension=".xlsx"):
 if __name__ == "__main__":
     file = "data\EDU-SQLPROD01\DIRS\dbo\DIRS.dbo.AltEdServicesType_data_dict.xlsx"
     standardize_excel(file,
-                      file + '2',
+                      file.replace('dbo', 'dbo2'),
                       make_json=False,
                       find_codes=False,
                       order_codes=False,

@@ -1,0 +1,8 @@
+{
+    "stateOrganizationID": [
+        "districtNumber",
+        "districtType",
+        "schoolNumber",
+        "unitMinor"
+    ]
+}

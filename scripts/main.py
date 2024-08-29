@@ -1,6 +1,7 @@
 from json_excel_conversion import *
 from custom_cols import get_col_headers
 from initialize_data_dict import *
+import shutil
 
 if __name__ == "__main__":
     ### STANDARDIZE EXCEL FILES
@@ -11,27 +12,30 @@ if __name__ == "__main__":
     for directory in directories:
         files.extend(list_files(directory))
     # Remove non data dicts from the list
-    files = [
-        file for file in files
-        if '_data_dict.xlsx' in file or 'Resources\\' in file
-    ]
 
     # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
 
     # database_name = 'DIRS'
     for file in files:
-        directory = "\\".join(file.split("\\")[0:-1])
         names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
         database_name = names[0]
-        find_codes = True if database_name in ['ESSA', 'DIRS'] else False
+        find_codes = True if database_name in ['RDMAttributes'] else False
+        output_file = file.replace('excel_dds', 'excel_dds2')
 
-        standardize_excel(file,
-                          file.replace(directory, directory + '2'),
-                          make_json=False,
-                          find_codes=False,
-                          order_codes=True,
-                          maintain_columns=True,
-                          custom_col_names=get_col_headers(database_name))
+        directory = "\\".join(output_file.split("\\")[0:-1])
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        if '_data_dict.xlsx' in file:
+            standardize_excel(file,
+                              output_file,
+                              make_json=False,
+                              find_codes=find_codes,
+                              order_codes=True,
+                              maintain_columns=True,
+                              custom_col_names=get_col_headers(database_name))
+        else:
+            shutil.copy(file, output_file)
 
     #### INITIALIZE DATA DICTIONARIES
     # # Read in the table names
