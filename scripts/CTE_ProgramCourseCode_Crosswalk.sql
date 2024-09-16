@@ -1,3 +1,7 @@
+-- Program title is equalent to the pathway program name
+-- NULL Old values indicate that the course has no previous equivalent
+-- NULL New values indicate that the course has no current equivalent
+
 USE Carl_Perkins;
 
 SELECT 2021 AS [Year]

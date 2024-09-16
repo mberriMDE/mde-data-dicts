@@ -441,7 +441,7 @@ def dd_json_to_excel(data,
             'Description': 50,
             'Source Information': 40,
             'Raw Data Origin': 40,
-            'Reporting Status': 10,
+            'Reporting Status': 15,
             'Introduced': 10,
             'Discontinued': 12,
             'Acceptable Values': 20,
@@ -593,6 +593,8 @@ def dd_excel_to_json(input_file, maintain_columns=False):
             table_type = "Reference Table"
         else:
             table_type = "Data Table"
+    else:
+        table_type = table_type.replace('(', '').replace(')', '')
 
     # Extract the FAQ section
     # Assuming FAQs start from the 4th row and the sheet has headers at the 3rd row

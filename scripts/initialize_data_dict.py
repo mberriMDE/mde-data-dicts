@@ -57,17 +57,20 @@ def initialize_data_dict(server_name,
 
     # Create a cursor from the connection
     cursor = conn.cursor()
-    cursor.execute(f"SELECT \
-                        COLUMN_NAME, \
-                        DATA_TYPE,\
-                        CHARACTER_MAXIMUM_LENGTH,\
-                        LEFT(IS_NULLABLE,1) AS IS_NULLABLE\
-                    FROM \
-                        INFORMATION_SCHEMA.COLUMNS\
-                    WHERE \
-                        TABLE_NAME = '{table_name}' AND TABLE_SCHEMA = '{view_name}'"
-                   )
+    query = f"SELECT \
+                COLUMN_NAME, \
+                DATA_TYPE,\
+                CHARACTER_MAXIMUM_LENGTH,\
+                LEFT(IS_NULLABLE,1) AS IS_NULLABLE\
+            FROM \
+                INFORMATION_SCHEMA.COLUMNS\
+            WHERE \
+                TABLE_NAME = '{table_name}' AND TABLE_SCHEMA = '{view_name}'"
+
+    cursor.execute(query)
+    print(table_name)
     for i, row in enumerate(cursor.fetchall()):
+        print(row)
         if row[3] == 'N':
             row_json = {
                 "Field Name": row[0],
@@ -75,10 +78,6 @@ def initialize_data_dict(server_name,
                 "Max Characters": row[2],
                 "Null Meaning": row[3]
             }
-            # print(row_json)
-            if not new_dict:
-                data_dict["Data Dictionary"][i]["Null Meaning"] = row_json[
-                    "Null Meaning"]
         else:
             row_json = {
                 "Field Name": row[0],
@@ -87,59 +86,65 @@ def initialize_data_dict(server_name,
             }
         if new_dict:
             data_dict["Data Dictionary"].append(row_json)
+        else:
+            for key, value in row_json.items():
+                data_dict["Data Dictionary"][i][key] = value
 
     return data_dict
 
 
 if __name__ == "__main__":
-    # files = list_files("RDMPROD01\\RDMESSA")
-    with open('data\\sleds_table_names.csv') as f:
-        tables = [line.strip() for line in f]
-    ### Section to initialize data dictionaries
-    server = 'E60SDWP20WDB001'
-    database = 'SLEDSDW'
-    view = 'dbo'
-    # tables = files
-    for table in tables:
-        data_dict = initialize_data_dict(server, database, view, table)
-        json_data = json.dumps(data_dict, indent=4)
-        file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"
-        os.makedirs(os.path.dirname(file_name), exist_ok=True)
-        dd_json_to_excel(json_data,
-                         file_name,
-                         custom_col_names=get_col_headers(database))
+    # # files = list_files("RDMPROD01\\RDMESSA")
+    # with open('data\\sleds_table_names.csv') as f:
+    #     tables = [line.strip() for line in f]
+    # ### Section to initialize data dictionaries
+    # server = 'E60SDWP20WDB001'
+    # database = 'SLEDSDW'
+    # view = 'dbo'
+    # # tables = files
+    # for table in tables:
+    #     data_dict = initialize_data_dict(server, database, view, table)
+    #     json_data = json.dumps(data_dict, indent=4)
+    #     file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"
+    #     os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    #     dd_json_to_excel(json_data,
+    #                      file_name,
+    #                      custom_col_names=get_col_headers(database))
 
     ### Section to fix the "Null Meaning" column in the data dictionary
-    # server_nick = "SQLPROD01"
-    # server_name = "EDU-" + server_nick
+    server_name = "EDU-RDMPROD01"
 
-    # files = list_files(f"new_SQLPROD01")
-    # for file in files:
-    #     directory = "\\".join(file.split("\\")[:-1])
-    #     if not os.path.exists("1"+directory):
-    #         os.makedirs("1"+directory)
+    files = list_files(f"data\\RDMAttributes2")
+    for file in files:
+        directory = "\\".join(file.split("\\")[:-1])
+        if not os.path.exists(directory):
+            os.makedirs("1" + directory)
 
-    #     names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
-    #     database_name = names[0]
-    #     view_name = names[1]
-    #     table_name = names[2]
-    #     # SQLPROD01\Assessments\dbo\Assessments.dbo.Assessment_WIDA_VERIFIED_ACCESS_data_dict.xlsx
-    #     # table_name = file.split(
-    #     #     "\\")[-1].replace("_data_dict.xlsx", "").split(".")[-1]
-    #     # print(table_name)
+        names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
+        database_name = names[0]
+        view_name = names[1]
+        table_name = names[2]
+        # SQLPROD01\Assessments\dbo\Assessments.dbo.Assessment_WIDA_VERIFIED_ACCESS_data_dict.xlsx
+        # table_name = file.split(
+        #     "\\")[-1].replace("_data_dict.xlsx", "").split(".")[-1]
+        # print(table_name)
 
-    #     # Read in current data dictionary
-    #     data_dict = None
-    #     try:
-    #         json_data = dd_excel_to_json(file)
-    #         data_dict = json.loads(json_data)
-    #     except FileNotFoundError:
-    #         print(f"File not found: {file}")
+        # Read in current data dictionary
+        data_dict = None
+        try:
+            json_data = dd_excel_to_json(file)
+            data_dict = json.loads(json_data)
+        except FileNotFoundError:
+            print(f"File not found: {file}")
 
-    #     data_dict = initialize_data_dict(
-    #         server_name, database_name, view_name, table_name, data_dict=data_dict)
-    #     json_data = json.dumps(data_dict, indent=4)
+        data_dict = initialize_data_dict(server_name,
+                                         database_name,
+                                         view_name,
+                                         table_name,
+                                         data_dict=data_dict)
+        json_data = json.dumps(data_dict, indent=4)
 
-    #     # Convert the data dictionary to an excel file
-    #     dd_json_to_excel(json_data, "1"+file,
-    #                      custom_col_names=get_col_headers(database_name))
+        # Convert the data dictionary to an excel file
+        dd_json_to_excel(json_data,
+                         file.replace("RDMAttributes2", "RDMAttributes3"),
+                         custom_col_names=get_col_headers(database_name))

@@ -94,13 +94,13 @@ def search_data_dicts(directories: list[str],
 
 
 if __name__ == "__main__":
-    directories = ['data\\EDU-SQLPROD01']
-    search_terms = ['unit', 'minor']
-    column_names = ['Field Name', 'Description']
+    directories = ['data\\excel_dds\\EDU-SQLPROD01']
+    search_terms = ['courselevel']
+    column_names = ['Field Name']
     match_locations = search_data_dicts(directories,
                                         search_terms,
                                         column_names,
-                                        search_term_op="AND",
+                                        search_term_op="OR",
                                         column_op="OR",
                                         match_case=False)
     for location in match_locations:

@@ -6,7 +6,7 @@ import shutil
 if __name__ == "__main__":
     ### STANDARDIZE EXCEL FILES
     directories = [
-        'data\\excel_dds',
+        'data\\RPT',
     ]
     files = []
     for directory in directories:
@@ -18,9 +18,9 @@ if __name__ == "__main__":
     # database_name = 'DIRS'
     for file in files:
         names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
-        database_name = names[0]
-        find_codes = True if database_name in ['RDMAttributes'] else False
-        output_file = file.replace('excel_dds', 'excel_dds2')
+        database_name = "ESSA"  #names[0]
+        # find_codes = True if database_name in ['RDMAttributes'] else False
+        output_file = file.replace('RPT\\', 'RPT2\\')
 
         directory = "\\".join(output_file.split("\\")[0:-1])
         if not os.path.exists(directory):
@@ -30,7 +30,7 @@ if __name__ == "__main__":
             standardize_excel(file,
                               output_file,
                               make_json=False,
-                              find_codes=find_codes,
+                              find_codes=True,
                               order_codes=True,
                               maintain_columns=True,
                               custom_col_names=get_col_headers(database_name))
@@ -54,3 +54,14 @@ if __name__ == "__main__":
     #     dd_json_to_excel(json_data,
     #                      file_name,
     #                      custom_col_names=get_col_headers(database))
+
+    # ### LIST FILES
+    # directories = ['data\\dbo']
+    # files = []
+    # for directory in directories:
+    #     files.extend(list_files(directory))
+    # tables = [
+    #     file.split("\\")[-1].replace("_data_dict.xlsx", "") for file in files
+    # ]
+    # for table in tables:
+    #     print(table.replace("SLEDSDW.", ""))
