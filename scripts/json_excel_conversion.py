@@ -285,10 +285,12 @@ def dd_json_to_excel(data,
                          leave=False):
         if 'Acceptable Values' in variable:
             if isinstance(variable['Acceptable Values'], list):
-                # This is to check if the variable has character components instead of codes, in which case we don't want to find codes
+                # This is to check if the variable has character components instead of codes (or non-literal components), in which case we don't want to find codes
                 char_components = False
-                if 'character' in variable['Notes'].lower(
-                ) and 'component' in variable['Notes'].lower():
+                if ('character' in variable['Notes'].lower()
+                        and 'component' in variable['Notes'].lower()) or (
+                            'non' in variable['Notes'].lower()
+                            and 'literal' in variable['Notes'].lower):
                     char_components = True
                 single_find_codes = find_codes if not char_components else False
 
