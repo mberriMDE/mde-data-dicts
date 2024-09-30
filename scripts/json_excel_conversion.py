@@ -263,6 +263,8 @@ def dd_json_to_excel(data,
         data (str): The JSON formatted data dictionary to convert.
         output_file (str): The path to the output Excel file.
         find_codes (bool): Whether or not to populate code sheets with the codes (unique values) that appear in the SQL
+        order_codes (bool): Whether or not to sort the code sheets
+        custom_col_names (dict): A dictionary of custom column names to use for the workbook (see get_col_headers)
 
     Returns:
         None
@@ -600,7 +602,16 @@ def dd_excel_to_json(input_file, maintain_columns=False):
 
     # Extract the FAQ section
     # Assuming FAQs start from the 4th row and the sheet has headers at the 3rd row
+    print(data_dictionary_for)
+    if data_dictionary_for == "[E60SDWP20WDB001].[SLEDSDW].[dbo].[MCCCStudent]":
+        print('hello')
     df_faqs = df_info_uses.iloc[3:].reset_index(drop=True)
+    df_faqs = df_faqs.iloc[:, :2]  # Ensure only the first two columns are kept
+    print(df_faqs.columns)
+    print(len(df_faqs.columns))
+    print(workbook_column_names['Info and Uses'])
+    print(len(workbook_column_names['Info and Uses']))
+
     # Setting column names
     df_faqs.columns = workbook_column_names['Info and Uses']
 
