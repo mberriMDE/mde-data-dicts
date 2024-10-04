@@ -41,8 +41,8 @@ class Key:
     def __init__(self,
                  key_set: frozenset[tuple],
                  type: str,
-                 master_type: str,
                  dd_for: str,
+                 master_type: str = None,
                  equivalent_key_set: frozenset[tuple] = None,
                  subset_of: frozenset[tuple] = None):
         self.keys = key_set
@@ -413,7 +413,8 @@ def find_master_keys(json_data, equivalent_keys=None):
 def fill_keys(json_data,
               key_dict_masters,
               generate_excel=True,
-              equivalent_keys=None):
+              overwrite=True,
+              equivalent_fields=None):
     '''
     Fill in missing foreign keys in the data dictionary information.
 
@@ -421,6 +422,7 @@ def fill_keys(json_data,
         json_data (list[dict]): List of dictionaries containing data dictionary information
         key_dict_masters (defaultdict(lambda: defaultdict(lambda: (None, []))): Dictionary containing only the master keys information.
         generate_excel (bool): If True, generate new excel files with filled in foreign keys and composite keys 
+        overwrite (bool): If True, the already present non-master key strings should be overwritten with the correct non-master key strings
         equivalent keys (dict): Maps a master key field to a list of fields that form a composite key of equivalent information
     
     Returns:
@@ -430,169 +432,233 @@ def fill_keys(json_data,
             the global name of a shared key. The value is the inner dictionary. The 'Default' dictionary key
             in the inner dictionary stores the regular master key for a particular global name. The remaining inner dictionary keys 
             store local master keys with the relevant database being the inner dictionary key. The inner dictionary values are tuples of 
-            the master key and a list of the child keys. 
+            the master key and a list of the child keys (empty for this function).
             example:
             {
                 'global_name1': {
-                                    'Default': (master_key, [child_key1, child_key2])
-                                    'server1': (local_master_key, [child_key1, child_key2])
+                                    'Default': (master_key, [])
+                                    'server1.database1': (local_master_key, [])
                                 }
             }
     '''
 
-    # # equivalence map stores the equivalent keys for each key
-    # equivalence_map = {}
-    # for global_names, key in master_keys:
-    #     if key.equivalent_key_set:
-    #         for equivalent_key in key.equivalent_key_set:
-    #             equivalence_map[equivalent_key] = key
+    # map from lowercase global name to global name
+    global_lower_to_upper = {
+        global_name.lower(): global_name
+        for global_name in key_dict_masters
+    }
+    for equivalents in equivalent_fields.values():
+        for global_name in equivalents:
+            global_lower_to_upper[global_name.lower()] = global_name
 
     # Fill in missing foreign keys and add them to key_dict
+    key_dict = key_dict_masters
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
-        database = dd_for.split('].[')[1]
+        server = dd_for[1:-1].split('].[')[0]
+        database = f"{server}.{dd_for.split('].[')[1]}"
         for variable in data_dict['Data Dictionary']:
-            # key_info = variable['Key Information']
-            key_infos = variable['Key Information'].split(',')
-            write_to_key_infos = []
-            col_name = variable['Field Name']
-            for key_info in key_infos:
-                if len(key_info) > 0:
-                    if key_info[0] == 'M' or key_info[
-                            0] == 'L':  # Skip master/local master keys
-                        write_to_key_infos.append(key_info)
-                        continue
-                    if key_info[0] == 'S':  # Skip subset keys
-                        write_to_key_infos.append(key_info)
-                        continue
-                    if key_info[-1] in [
-                            '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
-                    ]:  # Skip composite keys
-                        write_to_key_infos.append(key_info)
-                        continue
-                if ':' not in key_info:  # Identical global name
-                    # This statement finds the global name of the first key (with key_set length 1) that matches the column name
-                    match = next(
-                        (global_names
-                         for global_names in key_dict_masters.keys()
-                         if len(global_names) == 1 and next(iter(
-                             global_names)).lower() == col_name.lower()), None)
-                    if match:
-                        if database in key_dict_masters[match]:
-                            use_db = database
-                        else:
-                            use_db = 'Default'
-                        master_key = key_dict_masters[match][use_db][0]
+            info_list = variable['Key Information'].split(',')
+            info_list = [i.strip() for i in info_list]
+            write_to_key_info = []
+            local_name = variable['Field Name']
+            lower_global = None
+            pop_string = None
 
-                        if master_key.type == 'PK' or master_key.type == 'UK':
-                            write_to_key_infos.append('FK')
-
-                            # Add the identified key to the key_dict
-                            key_dict_masters[match][use_db][1].append(
-                                Key(frozenset([(col_name, col_name)]), 'FK',
-                                    None, dd_for))
-
-                        elif master_key.type == 'EK':
-                            write_to_key_infos.append('FE')
-
-                            # Add the identified key to the key_dict
-                            key_dict_masters[match][use_db][1].append(
-                                Key(frozenset([(col_name, col_name)]), 'FE',
-                                    None, dd_for))
+            skip = False
+            write = False
+            for info in info_list:
+                if re.match(r"^[MLS]?[PUEF][KE]\d?$", info):  # key string case
+                    if overwrite:
+                        write = True
+                    if info[0] == 'M' or info[0] == 'L':  # Skip master keys
+                        skip = True
+                        break
                 else:
-                    global_name = key_info.split(':')[1].strip()
-                    match = next(
-                        (global_names
-                         for global_names in key_dict_masters.keys()
-                         if len(global_names) == 1 and next(iter(
-                             global_names)).lower() == col_name.lower()), None)
+                    write = True
 
-                    if match:
-                        if database in key_dict_masters[match]:
-                            use_db = database
-                        else:
-                            use_db = 'Default'
-                        master_key = key_dict_masters[match][use_db][0]
+                if info.startswith('G:'):  # global name case
+                    lower_global = info.split(':')[1].strip().lower()
 
-                        if master_key.type == 'PK' or master_key.type == 'UK':
-                            write_to_key_infos.append('FK: ' + global_name)
+                if info in ['D', 'O']:  # pop string case
+                    pop_string = info
 
-                            # Add the identified key to the key_dict
-                            key_dict_masters[match][use_db][1].append(
-                                Key(frozenset([(col_name, col_name)]), 'FK',
-                                    None, dd_for))
-                        elif master_key.type == 'EK':
-                            variable['Key Information'] = 'FE: ' + global_name
+            if skip:
+                continue
 
-                            # Add the identified key to the key_dict
-                            key_dict_masters[match][use_db][1].append(
-                                Key(frozenset([(col_name, col_name)]), 'FE',
-                                    None, dd_for))
+            if lower_global is not None:
+                write_to_key_info.append(
+                    f'G: {global_lower_to_upper[lower_global]}')
+            else:
+                # Default to the field name if no global name is specified
+                lower_global = local_name.lower()
+
+            if pop_string:
+                write_to_key_info.append(pop_string)
+
+            # This statement finds the global name of the first master key that matches the column name
+            match = next((master_name
+                          for master_name in key_dict_masters.keys()
+                          if master_name.lower() == lower_global), None)
+            if match:
+                if database in key_dict_masters[match]:
+                    use_db = database
+                else:
+                    use_db = 'Default'
+                master_key = key_dict_masters[match][use_db][0]
+
+                if master_key.type == 'PK' or master_key.type == 'UK':
+                    key_type = 'FK'
+                elif master_key.type == 'EK':
+                    key_type = 'FE'
+
+                # Add the identified key to the key_dict
+                key_dict_masters[match][use_db][1].append(
+                    Key(frozenset([(match, local_name)]),
+                        type=key_type,
+                        dd_for=dd_for,
+                        equivalent_key_set=master_key.equivalent_key_set))
+
+                write_to_key_info.insert(0, key_type)
+            if write:
+                variable['Key Information'] = ', '.join(write_to_key_info)
 
     # Fill in missing composite keys
     for data_dict in json_data:
+        dd_for = data_dict['Data Dictionary For']
+        server = dd_for[1:-1].split('].[')[0]
+        database = f"{server}.{dd_for.split('].[')[1]}"
         # Get a set of all the fields in the data dictionary
-        fields = set()
+        lower_fields = set()
+        local_names = {}
 
         # Dictionary to hold the composite keys that are present in the data dictionary along with the composite suffix (count)
-        present_comp_keys = defaultdict(set)
+        present_mcks = defaultdict(set)
         count = 1
         for variable in data_dict['Data Dictionary']:
-            fields.add(variable['Field Name'])
-            # Add the global names if they exist
-            key_infos = variable['Key Information'].split(',')
-            for key_info in key_infos:
-                if len(key_info) > 0:
-                    if key_info[0] in ['M', 'L', 'S']:
-                        # Skip master/local master keys and subset keys
-                        continue
-                splut = variable['Key Information'].split(':')
-                if len(splut) > 1:
-                    fields.add(splut[1].strip())
-        lower_fields = set(subkey.lower() for subkey in fields)
+            lower_global = None
+            # Add the global name of the field to the set of fields
+            info_list = variable['Key Information'].split(',')
+            for info in info_list:
+                if info.startswith('G:'):
+                    lower_global = info.split(':')[1].strip()
+                    break
+            if lower_global is None:
+                lower_global = variable['Field Name'].lower()
+            lower_fields.add(lower_global)
 
-        for mck_names in key_dict_masters.keys():
-            if len(mck_names) == 1:  # Skip single keys
+        for mk_name in key_dict_masters.keys():
+            if mk_name not in equivalent_fields:
                 continue
-            lower_mck_names = set(c.lower() for c in mck_names)
-            if lower_mck_names.issubset(lower_fields):
-                present_comp_keys[mck_names] = count
+
+            if mk_name.lower(
+            ) in lower_fields:  # Don't bother with keys that are already in the data dictionary
+                continue
+
+            mck_set = set(equivalent_fields[mk_name])
+
+            # Mark the composite key if it's present in the data dictionary
+            lower_mck_set = set(c.lower() for c in mck_set)
+
+            # The intersection of the composite key with the set of fields in the data dictionary
+            intersection = lower_mck_set.intersection(lower_fields)
+
+            if len(intersection) > 0:
+                present_mcks[lower_mck_set] = {
+                    'count': count,
+                    'mk_name': mk_name,
+                    'remaining': intersection,
+                    'components': set(),
+                    'use_db': None,
+                    'type': None
+                }
+                # The count is used to identify the composite key
+                # the mk_name is used to identify the associated master key
+                # the set in index 2 is used to identify the remaining composite keys components
+                # the empty set is for storing the set of global/local name pairs
                 count += 1
+
         for variable in data_dict['Data Dictionary']:
-            key_info = variable['Key Information']
-            server = data_dict['Data Dictionary For'].split('].[')[0]
-            col_name = variable['Field Name']
-            if len(key_info) > 0:
-                if key_info[0] in ['M', 'L', 'S']:
-                    continue
-            if key_info == '' or ':' not in key_info:  # Check if the local name is in the composite key
-                for comp_key_names in present_comp_keys:
-                    comp_key_names_lower = set(c.lower()
-                                               for c in comp_key_names)
-                    if col_name.lower() in comp_key_names_lower:
-                        if server in key_dict_masters[comp_key_names]:
-                            use_db = server
-                        else:
-                            use_db = 'Default'
-                        mck = key_dict_masters[comp_key_names][use_db][0]
-                        if mck.type == 'PK' or key_dict_masters[
-                                comp_key_names] == 'UK':
-                            variable[
-                                'Key Information'] = f'FK{present_comp_keys[comp_key_names]}'
-                        elif mck.type == 'EK':
-                            variable[
-                                'Key Information'] = f'EK{present_comp_keys[comp_key_names]}'
-            if ':' in key_info:  # Check if the global name is in the composite key
-                global_name = key_info.split(':')[1].strip()
-                for comp_key_names in present_comp_keys:
-                    comp_key_names_lower = set(c.lower()
-                                               for c in comp_key_names)
-                    if global_name.lower() in comp_key_names_lower:
-                        if key_dict_masters[
-                                comp_key_names].type == 'PK' or key_dict_masters[
-                                    comp_key_names] == 'UK':
-                            variable[
-                                'Key Information'] = f'FK{present_comp_keys[comp_key_names]}'
+            info_list = [
+                info.strip() for info in variable['Key Information'].split(',')
+            ]
+            local_name = variable['Field Name']
+
+            pop_string = None
+            lower_global = None
+            skip = False
+            write = False
+            for info in info_list:
+                if re.match(r"^[MLS]?[PUEF][KE]\d?$", info):
+                    if not overwrite:
+                        write = False
+                    if info[0] == 'M' or info[0] == 'L':
+                        skip = True
+                        write = False
+                        break
+                if info.startswith('G:'):  # Global name
+                    lower_global = info.split(':')[1].strip().lower()
+                    write_to_key_info.append(
+                        f'G: {global_lower_to_upper[lower_global]}')
+                if info in ['O', 'D']:  # Population string
+                    pop_string = info
+                    write_to_key_info.append(pop_string)
+
+            if skip:
+                continue
+
+            # Retain the info list items
+            if lower_global is None:
+                lower_global = local_name.lower()
+
+            local_names[lower_global] = local_name
+
+            for comp_key_names in present_mcks:
+                if lower_global in comp_key_names and lower_global in present_mcks[
+                        comp_key_names][2]:
+
+                    # Remove the used component from the set
+                    present_mcks[comp_key_names][2].remove(lower_global)
+
+                    # Add the global/local name pair to the set
+                    present_mcks[comp_key_names][3].add(
+                        (global_lower_to_upper[lower_global],
+                         local_names[lower_global]))
+
+                    current_count = present_mcks[comp_key_names][0]
+                    mck_name = present_mcks[comp_key_names][1]
+
+                    if database in key_dict_masters[mck_name]:
+                        use_db = database
+                    else:
+                        use_db = 'Default'
+
+                    present_mcks[comp_key_names]['use_db'] = use_db
+
+                    master_key = key_dict_masters[mck_name][use_db][0]
+
+                    if master_key.type == 'PK' or master_key.type == 'UK':
+                        key_type = 'FK'
+                    elif master_key.type == 'EK':
+                        key_type = 'FE'
+
+                    present_mcks[comp_key_names]['type'] = key_type
+
+                    write_to_key_info.insert(
+                        0, f'S{key_type}{current_count}: {mck_name}')
+
+            if write:
+                variable['Key Information'] = ', '.join(write_to_key_info)
+
+        for present_mck in present_mcks:
+            if len(present_mcks['remaining']) > 0:
+                key = Key(
+                    present_mck['components'], type=present_mck['type']
+                ), dd_for = dd_for, subset_of = present_mck['mk_name']
+                key_dict[present_mck['mk_name']][
+                    present_mck['use_db']][1].append(key)
+
+        return json_data, key_dict
 
 
 #     master_keys.update(master_comp_keys)

@@ -125,8 +125,8 @@ def search_data_dicts(directories: list[str],
 
 
 if __name__ == "__main__":
-    directories = ['data\\excel_dds\\EDU-SQLPROD01']
-    search_terms = ['timeofincident']
+    directories = ['data\\excel_dds\\E60SDWP20WDB001\\']
+    search_terms = ['component']
     column_names = ['Field Name']
     match_locations = search_data_dicts(directories,
                                         search_terms,
