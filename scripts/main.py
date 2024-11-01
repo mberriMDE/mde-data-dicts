@@ -6,7 +6,7 @@ import shutil
 if __name__ == "__main__":
     ### STANDARDIZE EXCEL FILES
     directories = [
-        'data\\SLEDS',
+        'data\\dbo',
     ]
     files = []
     for directory in directories:
@@ -18,9 +18,9 @@ if __name__ == "__main__":
     # database_name = 'DIRS'
     for file in files:
         names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
-        database_name = "SLEDSDW"  #names[0]
+        database_name = "StudentLevelObservations"  #names[0]
         # find_codes = True if database_name in ['RDMAttributes'] else False
-        output_file = file.replace('MCCC\\', 'MCCC2\\')
+        output_file = file.replace('dbo\\', 'dbo2\\')
 
         directory = "\\".join(output_file.split("\\")[0:-1])
         if not os.path.exists(directory):
@@ -37,14 +37,14 @@ if __name__ == "__main__":
         else:
             shutil.copy(file, output_file)
 
-    #### INITIALIZE DATA DICTIONARIES
+    # ### INITIALIZE DATA DICTIONARIES
     # # Read in the table names
-    # with open('data\\carl_perkins_tables.txt') as f:
+    # with open('data\\StudentLevelObservations_tables.txt') as f:
     #     tables = [line.strip() for line in f]
 
     # server = 'EDU-SQLPROD01'
-    # database = 'Carl_Perkins'
-    # view = 'dbo'
+    # database = 'StudentLevelObservations'
+    # view = 'dm'
 
     # for table in tables:
     #     data_dict = initialize_data_dict(server, database, view, table)

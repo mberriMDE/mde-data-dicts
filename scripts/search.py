@@ -24,11 +24,14 @@ def search_data_dicts(directories: list[str],
     files = []
     for d in directories:
         files.extend(list_files(d))
-    for file in files:
-        if "_data_dict.xlsx" not in file:
-            files.remove(file)
+    # for file in files:
+    #     if "_data_dict.xlsx" not in file:
+    #         files.remove(file)
     match_locations = []
     for file in files:
+        if "_data_dict.xlsx" not in file:
+            continue
+        # print(file)
         json_str = dd_excel_to_json(file)
         json_data = json.loads(json_str)
         dd_for = json_data["Data Dictionary For"]
@@ -125,8 +128,8 @@ def search_data_dicts(directories: list[str],
 
 
 if __name__ == "__main__":
-    directories = ['data\\excel_dds\\E60SDWP20WDB001\\']
-    search_terms = ['component']
+    directories = ['data\\excel_dds']
+    search_terms = ['LocationID']
     column_names = ['Field Name']
     match_locations = search_data_dicts(directories,
                                         search_terms,

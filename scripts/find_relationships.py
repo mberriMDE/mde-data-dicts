@@ -190,14 +190,23 @@ def list_files(directory, extension=".xlsx"):
 
 # Load the data dictionary information from the excel files
 def load_json_data(file_paths):
-    data = []
+    json_data = []
     for file_path in file_paths:
         if 'data_dict' not in file_path:
             continue
         json_str = dd_excel_to_json(file_path)
         data_dict = json.loads(json_str)
-        data.append(data_dict)
-    return data
+        data_dict["File Path"] = file_path
+        json_data.append(data_dict)
+    return json_data
+
+
+# Write the json data to excel files
+def write_json_data(json_data, replaced, replacer):
+    for data_dict in json_data:
+        new_file_path = data_dict["File Path"].replace(replaced, replacer)
+        json_str = json.dumps(data_dict, indent=4)
+        dd_json_to_excel(json_str, new_file_path)
 
 
 # Group the data dictionary information by database
@@ -392,13 +401,13 @@ def find_master_keys(json_data, equivalent_keys=None):
                 global_name = local_name
 
             key_set = frozenset([(global_name, local_name)])
-            key_type = keystring[1:2]
+            key_type = keystring[1:3]
             master_type = keystring[0:1]
             equivalent_key_set = next(
                 (frozenset(equivalent_keys[k])
                  for k in equivalent_keys if k.lower() == global_name.lower()),
                 None)
-            key = Key(key_set, key_type, master_type, dd_for,
+            key = Key(key_set, key_type, dd_for, master_type,
                       equivalent_key_set)
 
             if master_type == 'M':
@@ -421,7 +430,6 @@ def fill_keys(json_data,
     Args:
         json_data (list[dict]): List of dictionaries containing data dictionary information
         key_dict_masters (defaultdict(lambda: defaultdict(lambda: (None, []))): Dictionary containing only the master keys information.
-        generate_excel (bool): If True, generate new excel files with filled in foreign keys and composite keys 
         overwrite (bool): If True, the already present non-master key strings should be overwritten with the correct non-master key strings
         equivalent keys (dict): Maps a master key field to a list of fields that form a composite key of equivalent information
     
@@ -455,6 +463,8 @@ def fill_keys(json_data,
     key_dict = key_dict_masters
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
+        if "Message" in dd_for:
+            print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
         for variable in data_dict['Data Dictionary']:
@@ -464,6 +474,7 @@ def fill_keys(json_data,
             local_name = variable['Field Name']
             lower_global = None
             pop_string = None
+            key_type = 'ERROR'
 
             skip = False
             write = False
@@ -474,6 +485,8 @@ def fill_keys(json_data,
                     if info[0] == 'M' or info[0] == 'L':  # Skip master keys
                         skip = True
                         break
+                    if info == 'PK':  # Foreign primary key
+                        key_type = info
                 else:
                     write = True
 
@@ -506,11 +519,14 @@ def fill_keys(json_data,
                 else:
                     use_db = 'Default'
                 master_key = key_dict_masters[match][use_db][0]
+                if master_key is None:
+                    print('here')
 
-                if master_key.type == 'PK' or master_key.type == 'UK':
-                    key_type = 'FK'
-                elif master_key.type == 'EK':
-                    key_type = 'FE'
+                if key_type != 'PK':
+                    if master_key.type == 'EK':
+                        key_type = 'FE'
+                    else:
+                        key_type = 'FK'
 
                 # Add the identified key to the key_dict
                 key_dict_masters[match][use_db][1].append(
@@ -526,6 +542,8 @@ def fill_keys(json_data,
     # Fill in missing composite keys
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
+        if "Message" in dd_for:
+            print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
         # Get a set of all the fields in the data dictionary
@@ -548,20 +566,22 @@ def fill_keys(json_data,
             lower_fields.add(lower_global)
 
         for mk_name in key_dict_masters.keys():
-            if mk_name not in equivalent_fields:
+            if mk_name.lower() == 'stateorganizationid':
+                print('here')
+            if mk_name not in equivalent_fields.keys():
                 continue
 
             if mk_name.lower(
             ) in lower_fields:  # Don't bother with keys that are already in the data dictionary
                 continue
 
-            mck_set = set(equivalent_fields[mk_name])
+            mck_set = frozenset(equivalent_fields[mk_name])
 
             # Mark the composite key if it's present in the data dictionary
-            lower_mck_set = set(c.lower() for c in mck_set)
+            lower_mck_set = frozenset(c.lower() for c in mck_set)
 
             # The intersection of the composite key with the set of fields in the data dictionary
-            intersection = lower_mck_set.intersection(lower_fields)
+            intersection = set(lower_mck_set.intersection(lower_fields))
 
             if len(intersection) > 0:
                 present_mcks[lower_mck_set] = {
@@ -572,10 +592,10 @@ def fill_keys(json_data,
                     'use_db': None,
                     'type': None
                 }
-                # The count is used to identify the composite key
-                # the mk_name is used to identify the associated master key
-                # the set in index 2 is used to identify the remaining composite keys components
-                # the empty set is for storing the set of global/local name pairs
+                # The 'count' is used to identify the composite key
+                # the 'mk_name' is used to identify the associated master key
+                # the 'remaining' is used to identify the remaining composite keys components
+                # the 'components' is for storing the set of global/local name pairs
                 count += 1
 
         for variable in data_dict['Data Dictionary']:
@@ -587,15 +607,18 @@ def fill_keys(json_data,
             pop_string = None
             lower_global = None
             skip = False
-            write = False
+            write = True
+            write_to_key_info = []
             for info in info_list:
                 if re.match(r"^[MLS]?[PUEF][KE]\d?$", info):
-                    if not overwrite:
-                        write = False
-                    if info[0] == 'M' or info[0] == 'L':
+                    if overwrite:
                         skip = True
                         write = False
                         break
+                    # if info[0] == 'M' or info[0] == 'L':
+                    #     skip = True
+                    #     write = False
+                    #     break
                 if info.startswith('G:'):  # Global name
                     lower_global = info.split(':')[1].strip().lower()
                     write_to_key_info.append(
@@ -615,18 +638,19 @@ def fill_keys(json_data,
 
             for comp_key_names in present_mcks:
                 if lower_global in comp_key_names and lower_global in present_mcks[
-                        comp_key_names][2]:
+                        comp_key_names]['remaining']:
 
                     # Remove the used component from the set
-                    present_mcks[comp_key_names][2].remove(lower_global)
+                    present_mcks[comp_key_names]['remaining'].remove(
+                        lower_global)
 
                     # Add the global/local name pair to the set
-                    present_mcks[comp_key_names][3].add(
+                    present_mcks[comp_key_names]['components'].add(
                         (global_lower_to_upper[lower_global],
                          local_names[lower_global]))
 
-                    current_count = present_mcks[comp_key_names][0]
-                    mck_name = present_mcks[comp_key_names][1]
+                    current_count = present_mcks[comp_key_names]['count']
+                    mck_name = present_mcks[comp_key_names]['mk_name']
 
                     if database in key_dict_masters[mck_name]:
                         use_db = database
@@ -650,33 +674,15 @@ def fill_keys(json_data,
             if write:
                 variable['Key Information'] = ', '.join(write_to_key_info)
 
-        for present_mck in present_mcks:
-            if len(present_mcks['remaining']) > 0:
-                key = Key(
-                    present_mck['components'], type=present_mck['type']
-                ), dd_for = dd_for, subset_of = present_mck['mk_name']
-                key_dict[present_mck['mk_name']][
-                    present_mck['use_db']][1].append(key)
+        for mck, vals in present_mcks.items():
+            if len(vals['remaining']) > 0:
+                key = Key(vals['components'],
+                          type=vals['type'],
+                          dd_for=dd_for,
+                          subset_of=vals['mk_name'])
+                key_dict[vals['mk_name']][vals['use_db']][1].append(key)
 
-        return json_data, key_dict
-
-
-#     master_keys.update(master_comp_keys)
-
-#     if generate_excel:
-#         for data_dict in json_data:
-#             dd_for = data_dict['Data Dictionary For']
-#             names = dd_for[1:-1].split('].[')
-#             server = names[0]
-#             database = names[1]
-#             view = names[2]
-#             table = names[3]
-#             dd_json_to_excel(
-#                 json.dumps(data_dict, indent=4),
-#                 f'filled\\{server}\\{database}\\{view}\\{database}.{view}.{table}_data_dict.xlsx'
-#             )
-
-#     return json_data, master_keys
+    return json_data, key_dict
 
 
 def build_graph(json_data, draw_path, show_reference_tables=True):
@@ -698,17 +704,7 @@ def build_graph(json_data, draw_path, show_reference_tables=True):
 
 
 if __name__ == "__main__":
-    if not Path('results').exists():
-        Path('results').mkdir()
-
-    directories = [
-        'data\\excel_dds\\EDU-SQLPROD01\\MDEORG',
-        'data\\excel_dds\\EDU-SQLPROD01\\MARSS',
-        'data\\excel_dds\\EDU-SQLPROD01\\DIRS',
-        'data\\excel_dds\\EDU-SQLPROD01\\EDMCourseCatalog',
-        'data\\excel_dds\\EDU-SQLPROD01\\ESSA',
-        'data\\excel_dds\\EDU-SQLPROD01\\Assessments'
-    ]
+    directories = ['data\\excel_dds\\EDU-SQLPROD01']
     files = []
     for directory in directories:
         files.extend(list_files(directory))
@@ -718,19 +714,9 @@ if __name__ == "__main__":
         equivalent_keys = json.load(f)
     key_dict_masters = find_master_keys(json_data, equivalent_keys)
 
-    print(key_dict_masters)
+    final_data, key_dict = fill_keys(json_data,
+                                     key_dict_masters,
+                                     overwrite=True,
+                                     equivalent_fields=equivalent_keys)
 
-    # origins = find_code_population_origins(json_data)
-    # for name, (origin, dests) in origins.items():
-    #     print(f'{name}: {origin} -> {dests}')
-    # filled_json_data = fill_Ds(json_data, origins, print_changes=True)
-    # population_map = add_code_population_destinations(filled_json_data,
-    #                                                   origins)
-    # for name, (origin, dests) in population_map.items():
-    #     print(f'{name}: {origin} -> {dests}')
-
-    # G = build_graph(json_data,
-    #                 'results\\subkeys.svg',
-    #                 show_reference_tables=True)
-
-    # json_data, master_keys = fill_keys(json_data)
+    write_json_data(final_data, 'excel_dds', 'excel_dds_filled')

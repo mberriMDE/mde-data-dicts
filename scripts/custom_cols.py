@@ -18,6 +18,58 @@ def get_col_headers(database_name):
                 'Discontinued', 'In Data', 'Notes'
             ]
         },
+        'StudentLevelObservations': {
+            'Legend': ['Data Dictionary Column Name', 'Description'],
+            'Info and Uses': ['FAQ', 'Response'],
+            'Relationships': [
+                'Field Name in This Table', 'Relationship',
+                'External Table Name', 'Field Name in External Table', 'Notes'
+            ],
+            'Data Dictionary': [
+                'Field Name', 'Description', 'Reporting Status', 'Introduced',
+                'Discontinued', 'Acceptable Values', 'Null Meaning',
+                'Data Type', 'Max Characters', 'Notes', 'Key Information'
+            ],
+            'Codes': [
+                'Code', 'Description', 'Reporting Status', 'Introduced',
+                'Discontinued', 'In Data', 'Notes'
+            ]
+        },
+        'SIDataMart': {
+            'Legend': ['Data Dictionary Column Name', 'Description'],
+            'Info and Uses': ['FAQ', 'Response'],
+            'Relationships': [
+                'Field Name in This Table', 'Relationship',
+                'External Table Name', 'Field Name in External Table', 'Notes'
+            ],
+            'Data Dictionary': [
+                'Field Name', 'Description', 'Reporting Status', 'Introduced',
+                'Discontinued', 'Acceptable Values', 'Null Meaning',
+                'Data Type', 'Max Characters', 'Notes', 'Key Information',
+                'Reporting Cycle'
+            ],
+            'Codes': [
+                'Code', 'Description', 'Reporting Status', 'Introduced',
+                'Discontinued', 'In Data', 'Notes'
+            ]
+        },
+        'StudentLevelObservations': {
+            'Legend': ['Data Dictionary Column Name', 'Description'],
+            'Info and Uses': ['FAQ', 'Response'],
+            'Relationships': [
+                'Field Name in This Table', 'Relationship',
+                'External Table Name', 'Field Name in External Table', 'Notes'
+            ],
+            'Data Dictionary': [
+                'Field Name', 'Description', 'Reporting Status', 'Introduced',
+                'Discontinued', 'Acceptable Values', 'Null Meaning',
+                'Data Type', 'Max Characters', 'Notes', 'Key Information'
+            ],
+            'Codes': [
+                'Code', 'Description', 'Reporting Status', 'Introduced',
+                'Discontinued', 'In Data', 'Notes'
+            ]
+        },
         'ESSA': {
             'Legend': ['Data Dictionary Column Name', 'Description'],
             'Info and Uses': ['FAQ', 'Response'],
@@ -47,7 +99,7 @@ def get_col_headers(database_name):
                 'Field Name', 'Description', 'Reporting Status', 'Introduced',
                 'Discontinued', 'Acceptable Values', 'Null Meaning',
                 'Data Type', 'Max Characters', 'Notes', 'Key Information',
-                'Validations', 'Source Information'
+                'Source Information'
             ],
             'Codes': [
                 'Code', 'Description', 'Reporting Status', 'Introduced',
