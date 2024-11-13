@@ -22,12 +22,12 @@ def date_to_school_year(date_int):
 
 
 # Get column names excluding TimeID
-query_columns = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'PSEnrollment' AND COLUMN_NAME != 'TimeID'"
+query_columns = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'PSEOStudent' AND COLUMN_NAME != 'TimeID'"
 columns = pd.read_sql(query_columns, conn)['COLUMN_NAME'].tolist()
 
 # Query to get TimeID and all columns
 query_data = "SELECT TimeID, " + ", ".join(
-    columns) + " FROM dbo.PSEnrollment ORDER BY TimeID"
+    columns) + " FROM dbo.PSEOStudent ORDER BY TimeID"
 data = pd.read_sql(query_data, conn)
 
 # Process each column to find introduced and last used years

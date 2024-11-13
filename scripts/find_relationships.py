@@ -60,8 +60,14 @@ class Key:
             self.global_label = '{' + ', '.join(self.global_names) + '}'
             self.local_label = '{' + ', '.join(self.local_names) + '}'
         else:
-            self.global_label = next(iter(self.global_names))
-            self.local_label = next(iter(self.local_names))
+            try:
+                self.global_label = next(iter(self.global_names))
+                self.local_label = next(iter(self.local_names))
+            except StopIteration:
+                print(self.global_names)
+                print(self.local_names)
+                self.global_label = self.global_names
+                self.local_label = self.local_names
 
         # self.dict = {self.global_name: key for key in key_set}
 
@@ -463,8 +469,6 @@ def fill_keys(json_data,
     key_dict = key_dict_masters
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
-        if "Message" in dd_for:
-            print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
         for variable in data_dict['Data Dictionary']:
@@ -491,15 +495,19 @@ def fill_keys(json_data,
                     write = True
 
                 if info.startswith('G:'):  # global name case
-                    lower_global = info.split(':')[1].strip().lower()
+                    global_name = info.split(':')[1].strip()
+                    lower_global = global_name.lower()
+                    if lower_global not in global_lower_to_upper:
+                        global_lower_to_upper[lower_global] = global_name
 
                 if info in ['D', 'O']:  # pop string case
                     pop_string = info
 
             if skip:
                 continue
-
             if lower_global is not None:
+                if 'courseleveltype' in lower_global:
+                    print(dd_for)
                 write_to_key_info.append(
                     f'G: {global_lower_to_upper[lower_global]}')
             else:
@@ -519,8 +527,8 @@ def fill_keys(json_data,
                 else:
                     use_db = 'Default'
                 master_key = key_dict_masters[match][use_db][0]
-                if master_key is None:
-                    print('here')
+                # if master_key is None:
+                # print('here')
 
                 if key_type != 'PK':
                     if master_key.type == 'EK':
@@ -542,7 +550,7 @@ def fill_keys(json_data,
     # Fill in missing composite keys
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
-        if "Message" in dd_for:
+        if '[Address]' in dd_for:
             print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
@@ -566,8 +574,8 @@ def fill_keys(json_data,
             lower_fields.add(lower_global)
 
         for mk_name in key_dict_masters.keys():
-            if mk_name.lower() == 'stateorganizationid':
-                print('here')
+            # if mk_name.lower() == 'stateorganizationid':
+            #     print('here')
             if mk_name not in equivalent_fields.keys():
                 continue
 
@@ -609,9 +617,11 @@ def fill_keys(json_data,
             skip = False
             write = True
             write_to_key_info = []
+
+            # Add the current info list items to be written
             for info in info_list:
                 if re.match(r"^[MLS]?[PUEF][KE]\d?$", info):
-                    if overwrite:
+                    if not overwrite:
                         skip = True
                         write = False
                         break

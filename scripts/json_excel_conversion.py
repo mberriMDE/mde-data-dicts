@@ -298,7 +298,6 @@ def dd_json_to_excel(data,
                                                     and 'special' in notes):
                     char_components = True
                 single_find_codes = find_codes if not char_components else False
-
                 current_rows = {
                     row['Code']: row
                     for row in variable['Acceptable Values']
