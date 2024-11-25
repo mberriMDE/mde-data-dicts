@@ -129,14 +129,14 @@ def search_data_dicts(directories: list[str],
 
 if __name__ == "__main__":
     directories = ['data\\excel_dds']
-    search_terms = ['AP']
+    search_terms = ['stateaidcategory']
     column_names = ['Field Name']
     match_locations = search_data_dicts(directories,
                                         search_terms,
                                         column_names,
                                         search_term_op="AND",
                                         column_op="OR",
-                                        match_case=True,
+                                        match_case=False,
                                         concat=False)
     for location in match_locations:
         print(location)

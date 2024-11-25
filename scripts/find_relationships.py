@@ -469,6 +469,8 @@ def fill_keys(json_data,
     key_dict = key_dict_masters
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
+        if '[Organization]' in dd_for:
+            print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
         for variable in data_dict['Data Dictionary']:
@@ -546,11 +548,13 @@ def fill_keys(json_data,
                 write_to_key_info.insert(0, key_type)
             if write:
                 variable['Key Information'] = ', '.join(write_to_key_info)
+        # dd_json_to_excel(json.dumps(data_dict, indent=4),
+        #                  output_file=f'data/intermediate/{dd_for}.xlsx')
 
     # Fill in missing composite keys
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
-        if '[Address]' in dd_for:
+        if '[OrganizationType]' in dd_for:
             print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
@@ -605,13 +609,13 @@ def fill_keys(json_data,
                 # the 'remaining' is used to identify the remaining composite keys components
                 # the 'components' is for storing the set of global/local name pairs
                 count += 1
-
+        # if '[Assessment_WIDA_' in dd_for:
+        #     print('here')
         for variable in data_dict['Data Dictionary']:
             info_list = [
                 info.strip() for info in variable['Key Information'].split(',')
             ]
             local_name = variable['Field Name']
-
             pop_string = None
             lower_global = None
             skip = False
@@ -619,12 +623,15 @@ def fill_keys(json_data,
             write_to_key_info = []
 
             # Add the current info list items to be written
+            key_string = None
             for info in info_list:
                 if re.match(r"^[MLS]?[PUEF][KE]\d?$", info):
                     if not overwrite:
                         skip = True
                         write = False
                         break
+                    else:
+                        key_string = info
                     # if info[0] == 'M' or info[0] == 'L':
                     #     skip = True
                     #     write = False
@@ -678,10 +685,14 @@ def fill_keys(json_data,
 
                     present_mcks[comp_key_names]['type'] = key_type
 
-                    write_to_key_info.insert(
-                        0, f'S{key_type}{current_count}: {mck_name}')
+                    key_string = f'S{key_type}{current_count}: {mck_name}'
 
+            if key_string is not None:
+                write_to_key_info.insert(0, key_string)
             if write:
+                if None in write_to_key_info:
+                    print('here')
+                    write_to_key_info.remove(None)
                 variable['Key Information'] = ', '.join(write_to_key_info)
 
         for mck, vals in present_mcks.items():
@@ -699,6 +710,18 @@ def build_graph(json_data, draw_path, show_reference_tables=True):
     '''
     Args:
         json_data (list of dict): List of dictionaries containing data dictionary information
+        key_dict (defaultdict(lambda: defaultdict(lambda: (None, []))): Dictionary containing the keys information.The outer dict key is 
+            the global name of a shared key. The value is the inner dictionary. The 'Default' dictionary key
+            in the inner dictionary stores the regular master key for a particular global name. The remaining inner dictionary keys 
+            store local master keys with the relevant database being the inner dictionary key. The inner dictionary values are tuples of 
+            the master key and a list of the child keys (empty for this function).
+            example:
+            {
+                'global_name1': {
+                                    'Default': (master_key, [])
+                                    'server1.database1': (local_master_key, [])
+                                }
+            }
         draw_path (str): Path to save the graph image
 
     Returns:
