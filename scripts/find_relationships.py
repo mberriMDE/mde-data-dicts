@@ -7,6 +7,7 @@ import networkx as nx
 import pygraphviz as pgv
 import re
 import urllib.parse
+import math
 
 # class KeyField:
 
@@ -469,7 +470,7 @@ def fill_keys(json_data,
     key_dict = key_dict_masters
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
-        if '[Organization]' in dd_for:
+        if '[OrganizationType]' in dd_for:
             print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
@@ -696,17 +697,17 @@ def fill_keys(json_data,
                 variable['Key Information'] = ', '.join(write_to_key_info)
 
         for mck, vals in present_mcks.items():
-            if len(vals['remaining']) > 0:
-                key = Key(vals['components'],
-                          type=vals['type'],
-                          dd_for=dd_for,
-                          subset_of=vals['mk_name'])
-                key_dict[vals['mk_name']][vals['use_db']][1].append(key)
+            # if len(vals['remaining']) > 0:
+            key = Key(vals['components'],
+                      type=vals['type'],
+                      dd_for=dd_for,
+                      subset_of=vals['mk_name'])
+            key_dict[vals['mk_name']][vals['use_db']][1].append(key)
 
-    return json_data, key_dict
+    return (json_data, key_dict)
 
 
-def build_graph(json_data, draw_path, show_reference_tables=True):
+def build_graph(json_data, key_dict, draw_path, show_reference_tables=True):
     '''
     Args:
         json_data (list of dict): List of dictionaries containing data dictionary information
@@ -723,6 +724,7 @@ def build_graph(json_data, draw_path, show_reference_tables=True):
                                 }
             }
         draw_path (str): Path to save the graph image
+        show_reference_tables (bool): Indicates whether to show the reference tables
 
     Returns:
         G (pgv.AGraph): Graph object containing the data dictionary relationships
@@ -731,9 +733,85 @@ def build_graph(json_data, draw_path, show_reference_tables=True):
     start by mapping PKs and UKs to FKs in external tables. PKs and UKs should map to PKs, UKs of the same
     name in external tables
     '''
-    # Fill in missing foreign keys
-    json_data, master_keys = fill_keys(json_data)
-    return None
+    data = format_json_data(json_data)
+
+    # Initialize graph and subgraphs
+    G = pgv.AGraph(strict=False, directed=True)
+    subgraphs = {}
+    color_map = {}
+    color_list = generate_colors()
+    for i, database in enumerate(data):
+        color_map[database] = color_list[i]
+        subgraph = G.add_subgraph(name=f'cluster_{database}',
+                                  label=database,
+                                  color=color_map[database].replace(
+                                      'light', ''))
+        subgraphs[database] = subgraph
+        subgraph.node_attr["fillcolor"] = color_map[database]
+
+    # Add nodes
+    table_nodes = {}
+    for database, data_dicts in data.items():
+        for data_dict in data_dicts:
+            dd_for = data_dict['Data Dictionary For']
+            table_type = data_dict['Table Type']
+            node = TableNode(subgraphs[database], dd_for, table_type)
+            table_nodes[dd_for] = node
+
+    # Add edges
+    for global_name, database_dicts in key_dict.items():
+        default_master_key = database_dicts['Default'][0]
+        for database, (master_key, child_keys) in database_dicts.items():
+            if master_key is None:
+                continue
+            table_nodes[master_key.dd_for].add_key(master_key)
+            source = table_nodes[master_key.dd_for]
+            for child_key in child_keys:
+                table_nodes[child_key.dd_for].add_key(child_key)
+                target = table_nodes[child_key.dd_for]
+                edge = TableEdge(G, source, target, master_key, child_key)
+
+            if database != 'Default':
+                source = table_nodes[default_master_key.dd_for]
+                target = table_nodes[master_key.dd_for]
+                edge = TableEdge(G,
+                                 source,
+                                 target,
+                                 default_master_key,
+                                 master_key,
+                                 color='blue')
+
+    # Scale nodes based on the number of edges
+    for node in G.nodes():
+        node.attr['width'] = 0.2 + 0.02 * len(G.neighbors(node))
+        node.attr['height'] = node.attr['width']
+
+    # Set subgraph attributes
+    for subgraph in G.subgraphs():
+        # subgraph.graph_attr['bgcolor'] = 'mintcream'
+        for node in subgraph.nodes():
+            node.attr['shape'] = 'circle'
+            node.attr['style'] = 'filled'
+            node.attr['fillcolor'] = subgraph.node_attr['fillcolor']
+            node.attr['color'] = 'black'
+
+    # Manage graph layout
+    G.layout(prog='dot')
+    G.graph_attr['overlap'] = 'false'  # Prevent overlapping nodes
+    G.graph_attr['splines'] = 'true'  # Draw curved edges
+    G.graph_attr['K'] = '2'  # Increase the spring constant
+    # G.graph_attr['bgcolor'] = 'mintcream'
+    G.graph_attr['clusterrank'] = 'local'
+
+    G.draw(draw_path, format='svg')
+    # Remove the extraneous '\' and '\n' characters from the SVG file. Not sure why they are there.
+    with open(draw_path, 'r') as f:
+        svg = f.read()
+    svg = svg.replace('\\\n', '')
+    with open(draw_path, 'w') as f:
+        f.write(svg)
+
+    return G
 
 
 if __name__ == "__main__":
@@ -753,3 +831,4 @@ if __name__ == "__main__":
                                      equivalent_fields=equivalent_keys)
 
     write_json_data(final_data, 'excel_dds', 'excel_dds_filled')
+    G = build_graph(json_data, key_dict, 'results\\excel_dds_filled.svg')
