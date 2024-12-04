@@ -716,10 +716,11 @@ def graph_to_json(G):
         }
         nodes.append(node)
 
-    edges = []
+    links = []
     for edge in G.edges():
-        edges.append({'source': edge[0], 'target': edge[1]})
-    graph_json = {'nodes': nodes, 'edges': edges}
+        link = {'source': edge[0], 'target': edge[1]}
+        links.append(link)
+    graph_json = {'nodes': nodes, 'links': links}
     return graph_json
 
 
