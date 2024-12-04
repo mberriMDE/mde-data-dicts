@@ -856,5 +856,5 @@ if __name__ == "__main__":
     G = build_graph(json_data, key_dict)
     graph_json = graph_to_json(G)
 
-    with open('mde-data-dicts\\docs\\graph.json', 'w') as f:
+    with open('mde-data-dicts\\docs\\graph_data.json', 'w') as f:
         f.write(json.dumps(graph_json, indent=4))

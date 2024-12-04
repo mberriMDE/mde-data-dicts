@@ -1,0 +1,44 @@
+/* Custom styling for the graph visualization page */
+body {
+    background-color: #f0f2f5;
+}
+
+.navbar {
+    margin-bottom: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+}
+
+/* Remove whitespace between label and small elements */
+.form-group label {
+    margin-bottom: 0;
+}
+
+.form-group small.form-text {
+    margin-top: 0;
+    display: block;
+}
+
+/* Styling for the graph display area */
+#graph {
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* Styling for the legend box */
+#legend {
+    border-radius: 5px;
+    margin-top: 10px;
+    padding: 10px;
+    font-size: 0.9em;
+}
+
+/* Optional: Adjust SVG responsiveness */
+svg {
+    display: block;
+    margin: 0 auto;
+}
