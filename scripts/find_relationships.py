@@ -470,8 +470,8 @@ def fill_keys(json_data,
     key_dict = key_dict_masters
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
-        if '[OrganizationType]' in dd_for:
-            print('here')
+        # if '[OrganizationType]' in dd_for:
+        #     print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
         for variable in data_dict['Data Dictionary']:
@@ -555,8 +555,6 @@ def fill_keys(json_data,
     # Fill in missing composite keys
     for data_dict in json_data:
         dd_for = data_dict['Data Dictionary For']
-        if '[OrganizationType]' in dd_for:
-            print('here')
         server = dd_for[1:-1].split('].[')[0]
         database = f"{server}.{dd_for.split('].[')[1]}"
         # Get a set of all the fields in the data dictionary
@@ -691,9 +689,9 @@ def fill_keys(json_data,
             if key_string is not None:
                 write_to_key_info.insert(0, key_string)
             if write:
-                if None in write_to_key_info:
-                    print('here')
-                    write_to_key_info.remove(None)
+                # if None in write_to_key_info:
+                #     # print('here')
+                #     write_to_key_info.remove(None)
                 variable['Key Information'] = ', '.join(write_to_key_info)
 
         for mck, vals in present_mcks.items():
@@ -707,7 +705,25 @@ def fill_keys(json_data,
     return (json_data, key_dict)
 
 
-def build_graph(json_data, key_dict, draw_path, show_reference_tables=True):
+def graph_to_json(G):
+    nodes = []
+    for dd_for in G.nodes():
+        node = {
+            'id': dd_for,
+            'tooltip': G.get_node(dd_for).attr['tooltip'],
+            'url': G.get_node(dd_for).attr['URL'],
+            'subgraph': dd_for[1:-1].split('].[')[1]
+        }
+        nodes.append(node)
+
+    edges = []
+    for edge in G.edges():
+        edges.append({'source': edge[0], 'target': edge[1]})
+    graph_json = {'nodes': nodes, 'edges': edges}
+    return graph_json
+
+
+def build_graph(json_data, key_dict, show_reference_tables=True):
     '''
     Args:
         json_data (list of dict): List of dictionaries containing data dictionary information
@@ -802,19 +818,24 @@ def build_graph(json_data, key_dict, draw_path, show_reference_tables=True):
     G.graph_attr['K'] = '2'  # Increase the spring constant
     # G.graph_attr['bgcolor'] = 'mintcream'
     G.graph_attr['clusterrank'] = 'local'
-
-    G.draw(draw_path, format='svg')
-    # Remove the extraneous '\' and '\n' characters from the SVG file. Not sure why they are there.
-    with open(draw_path, 'r') as f:
-        svg = f.read()
-    svg = svg.replace('\\\n', '')
-    with open(draw_path, 'w') as f:
-        f.write(svg)
+    G.graph_attr['rankdir'] = 'TB'  # Top to Bottom layout
 
     return G
 
 
+def generate_graph_svg(G, path):
+    G.draw(path, format='svg')
+
+    # Remove the extraneous '\' and '\n' characters from the SVG file. Not sure why they are there.
+    with open(path, 'r') as f:
+        svg = f.read()
+    svg = svg.replace('\\\n', '')
+    with open(path, 'w') as f:
+        f.write(svg)
+
+
 if __name__ == "__main__":
+
     directories = ['data\\excel_dds\\EDU-SQLPROD01']
     files = []
     for directory in directories:
@@ -831,4 +852,9 @@ if __name__ == "__main__":
                                      equivalent_fields=equivalent_keys)
 
     write_json_data(final_data, 'excel_dds', 'excel_dds_filled')
-    G = build_graph(json_data, key_dict, 'results\\excel_dds_filled.svg')
+
+    G = build_graph(json_data, key_dict)
+    graph_json = graph_to_json(G)
+
+    with open('mde-data-dicts\\docs\\graph.json', 'w') as f:
+        f.write(json.dumps(graph_json, indent=4))
