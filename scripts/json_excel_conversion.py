@@ -5,6 +5,7 @@ import pyodbc
 from tqdm import tqdm
 from pathlib import Path
 from custom_cols import get_col_headers
+from add_web_sleds_info import add_web_sleds_info
 
 # Function to truncate a string to 31 characters for worksheet names
 
@@ -253,26 +254,23 @@ def get_legend(data_dict_headers):
     return legend
 
 
-def dd_json_to_excel(data,
-                     output_file,
+def standardize_json(data,
                      find_codes=False,
                      order_codes=False,
-                     custom_col_names=None):
-    """
-    Convert a JSON data dictionary to an Excel workbook.
+                     custom_col_names=None,
+                     include_web_sleds_info=False):
+    '''
+    Standardizes the JSON data dictionary by setting the formatting to the standard template.
 
     Args:
-        data (str): The JSON formatted data dictionary to convert.
-        output_file (str): The path to the output Excel file.
+        data (dict): The JSON formatted data dictionary to convert.
         find_codes (bool): Whether or not to populate code sheets with the codes (unique values) that appear in the SQL
         order_codes (bool): Whether or not to sort the code sheets
         custom_col_names (dict): A dictionary of custom column names to use for the workbook (see get_col_headers)
+        add_web_sleds_info (bool): Whether or not to add web sleds info
 
     Returns:
-        None
-    """
-
-    data = json.loads(data)
+    '''
     name = data['Data Dictionary For']
 
     server_name, database_name, view_name, table_name = name[1:-1].split('].[')
@@ -319,6 +317,24 @@ def dd_json_to_excel(data,
                                                   order_codes=order_codes)
                 variable['Acceptable Values'] = dict_list
 
+    if include_web_sleds_info:
+        add_web_sleds_info(data)
+
+    return data
+
+
+def dd_json_to_excel(data, output_file):
+    '''
+    Convert a JSON data dictionary to an Excel workbook.
+
+    Args:
+        data (dict): The standard format JSON data dictionary to convert.
+        output_file (str): The path to the output Excel file to write to.
+
+    Returns:
+        None
+    '''
+
     # Create the output directory if it doesn't exist
     directory = os.path.dirname(output_file)
     if directory:
@@ -352,7 +368,7 @@ def dd_json_to_excel(data,
 
         bold_format = workbook.add_format({'bold': True})
 
-        ### LEGEND SHEET
+        # LEGEND SHEET
         # Standard rows for 'Legend' sheet
         column_descriptions = get_legend(
             data['Workbook Column Names']['Data Dictionary'])
@@ -402,7 +418,7 @@ def dd_json_to_excel(data,
         worksheet_info.write('A4', 'FAQ', header_format)
         worksheet_info.write('B4', 'Response', header_format)
 
-        ### RELATIONSHIPS SHEET
+        # RELATIONSHIPS SHEET
         df_relationships = pd.DataFrame(data['Relationships'])
         worksheet_relationships = workbook.add_worksheet('Relationships')
         # Write the headers with formatting
@@ -417,7 +433,7 @@ def dd_json_to_excel(data,
                 for col_num, value in enumerate(row):
                     worksheet_relationships.write(idx + 1, col_num, value)
 
-        ### DATA DICTIONARY SHEET
+        # DATA DICTIONARY SHEET
         # Required columns for 'Data Dictionary' sheet
         required_columns = data['Workbook Column Names']['Data Dictionary']
         # Initialize DataFrame for 'Data Dictionary' with required columns
@@ -557,7 +573,7 @@ def dd_excel_to_json(input_file, maintain_columns=False):
             back to the original column list for that databases
 
     Returns:
-        str: A JSON string representing the data dictionary.
+        dict: A formatted JSON dict representing the data dictionary.
     """
     # Define the column names for each sheet
     workbook_column_names = get_col_headers('Typical')
@@ -700,9 +716,7 @@ def dd_excel_to_json(input_file, maintain_columns=False):
         # Append the modified record to the data dictionary list
         metadata['Data Dictionary'].append(record)
 
-    # Convert the list of dictionaries to JSON
-    json_output = json.dumps(metadata, indent=4)
-    return json_output
+    return metadata
 
 
 def standardize_excel(input_file,
@@ -711,7 +725,8 @@ def standardize_excel(input_file,
                       find_codes=False,
                       order_codes=False,
                       maintain_columns=False,
-                      custom_col_names=None):
+                      custom_col_names=None,
+                      include_web_sleds_info=False):
     """
     Standardizes and updates the Excel file for the data dictionary by setting the formatting to 
     the standard template.
@@ -719,22 +734,34 @@ def standardize_excel(input_file,
     Args:
         input_file (str): The path to the input Excel file.
         output_file (str): The path to the output Excel file.
-        make_json (bool): Whether or not to write the intermediary json to a file
+        make_json (bool): Whether or not to write the intermediary json to a file. This will be identical to the output file with the .json extension instead of .xlsx.
         find_codes (bool): Whether or not to populate code sheets with the codes (unique values) that appear in the SQL
+        order_codes (bool): Whether or not to sort the code sheets
+        maintain_columns (bool): Whether or not to maintain the columns from the original Excel file
+        custom_col_names (dict): A dictionary of custom column names to use for the workbook (see get_col_headers)
+        add_web_sleds_info (bool): Whether or not to add web sleds info
 
     Returns:
         None
     """
+    # Convert Excel to JSON
     json_output = dd_excel_to_json(input_file,
                                    maintain_columns=maintain_columns)
+
+    # Standardize the JSON
+    standard_json = standardize_json(
+        json_output,
+        find_codes=find_codes,
+        order_codes=order_codes,
+        custom_col_names=custom_col_names,
+        include_web_sleds_info=include_web_sleds_info)
+
+    # Create a JSON file if requested
     if make_json:
         with open(output_file.replace('.xlsx', '.json'), 'w') as f:
-            f.write(json_output)
-    dd_json_to_excel(json_output,
-                     output_file,
-                     find_codes=find_codes,
-                     order_codes=order_codes,
-                     custom_col_names=custom_col_names)
+            f.write(json.dumps(standard_json, indent=4))
+
+    dd_json_to_excel(standard_json, output_file)
 
 
 def list_files(directory, extension=".xlsx"):

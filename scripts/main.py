@@ -15,7 +15,6 @@ if __name__ == "__main__":
 
     # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
 
-    # database_name = 'DIRS'
     for file in files:
         names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
         database_name = "SLEDSDW"  #names[0]
@@ -29,11 +28,12 @@ if __name__ == "__main__":
         if '_data_dict.xlsx' in file:
             standardize_excel(file,
                               output_file,
-                              make_json=False,
+                              make_json=True,
                               find_codes=True,
                               order_codes=True,
                               maintain_columns=True,
-                              custom_col_names=get_col_headers(database_name))
+                              custom_col_names=get_col_headers(database_name),
+                              include_web_sleds_info=True)
         else:
             shutil.copy(file, output_file)
 
