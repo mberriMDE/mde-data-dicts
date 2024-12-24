@@ -13,7 +13,7 @@ def initialize_web_sleds_code_fields(data_dict):
     '''
     dd_for = data_dict['Data Dictionary For']
     dd_for_list = dd_for[1:-1].split('].[')
-    table = dd_for_list[3]
+    table = dd_for_list[3].lower()
     with open('fetched_data.json', 'r') as f:
         fetched_data = json.load(f)
 
@@ -42,15 +42,13 @@ def add_web_sleds_info(data_dict):
 
     dd_for = data_dict['Data Dictionary For']
     dd_for_list = dd_for[1:-1].split('].[')
-    table = dd_for_list[3]
+    table = dd_for_list[3].lower()
     if table not in fetched_data:
         return data_dict
     fetched_data_dict = fetched_data[table]
 
     for field in data_dict['Data Dictionary']:
-        field_name = field['Field Name']
-        if field_name == 'Education':
-            print('here')
+        field_name = field['Field Name'].lower()
 
         if field_name in fetched_data_dict:
             if field['Description'] == '':
@@ -65,10 +63,10 @@ def add_web_sleds_info(data_dict):
                 # Initialize notes
                 for code_data in field['Acceptable Values']:
                     # Notes reflect whether or not the code is present in the database and web SLEDS
-                    if '(In database but not in web SLEDs)' not in code_data[
+                    if '(In database but not in web SLEDs data dictionary)' not in code_data[
                             'Notes']:
                         code_data[
-                            'Notes'] = '(In database but not in web SLEDs) ' + code_data[
+                            'Notes'] = '(In database but not in web SLEDs data dictionary) ' + code_data[
                                 'Notes']
 
                 for web_code_data in fetched_data_dict[field_name]['codes']:
@@ -90,10 +88,10 @@ def add_web_sleds_info(data_dict):
                                     new_description = web_code_data[
                                         'definition']
                                 code_data['Description'] = new_description
-                                code_data['Notes'] = code_data[
-                                    'Notes'].replace(
-                                        '(In database but not in web SLEDs)',
-                                        '(In web SLEDs and database)')
+                                code_data['Notes'] = code_data['Notes'].replace(
+                                    '(In database but not in web SLEDs data dictionary)',
+                                    '(In web SLEDs data dictionary and database)'
+                                )
                             break
                     # If the code is not present, add it
                     if not present:
@@ -107,7 +105,7 @@ def add_web_sleds_info(data_dict):
                             'In Data':
                             'N',
                             'Notes':
-                            '(In web SLEDs but not in database)'
+                            '(In web SLEDs data dictionary but not in database)'
                         })
 
     return data_dict

@@ -47,8 +47,8 @@ with requests.Session() as session:
         variables = data['variables']
         for var in variables:
             fetched_data[var['elementId']] = {
-                'variable_name': var['variable'],
-                'table_name': var['SLEDSTable'],
+                'variable_name': var['variable'].lower(),
+                'table_name': var['SLEDSTable'].lower(),
                 'number_of_codes': var['formattedNumberOfCodes']
             }
     else:

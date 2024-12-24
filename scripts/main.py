@@ -6,11 +6,13 @@ import shutil
 if __name__ == "__main__":
     ### STANDARDIZE EXCEL FILES
     directories = [
-        'data\\dbo',
+        'data\\SLEDS',
     ]
     files = []
     for directory in directories:
         files.extend(list_files(directory))
+
+    # print(len(files))
     # Remove non data dicts from the list
 
     # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
@@ -19,7 +21,7 @@ if __name__ == "__main__":
         names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
         database_name = "SLEDSDW"  #names[0]
         # find_codes = True if database_name in ['RDMAttributes'] else False
-        output_file = file.replace('dbo\\', 'dbo2\\')
+        output_file = file.replace('SLEDS\\', 'SLEDS2\\')
 
         directory = "\\".join(output_file.split("\\")[0:-1])
         if not os.path.exists(directory):
@@ -28,7 +30,7 @@ if __name__ == "__main__":
         if '_data_dict.xlsx' in file:
             standardize_excel(file,
                               output_file,
-                              make_json=True,
+                              make_json=False,
                               find_codes=True,
                               order_codes=True,
                               maintain_columns=True,
