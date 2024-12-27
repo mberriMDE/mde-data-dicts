@@ -8,7 +8,7 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    /* max-width: 800px; */
     margin: auto;
 }
 
@@ -40,5 +40,5 @@ body {
 /* Optional: Adjust SVG responsiveness */
 svg {
     display: block;
-    margin: 0 auto;
+    margin: 0 0;
 }
