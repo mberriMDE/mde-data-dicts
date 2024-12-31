@@ -63,9 +63,16 @@ fetch("graph_data.json")
     graphData.nodes = [...graphData.nodes, ...centralNodes];
     graphData.links = [...graphData.links, ...centralLinks];
 
+    // Precompute node degrees
+    graphData.nodes.forEach(node => {
+      node.degree = graphData.links.filter(
+        link => link.source === node.id || link.target === node.id
+      ).length;
+    });
+
+    // Update degreeScale to use the precomputed degrees
     const degreeScale = d3.scaleLinear()
-      .domain([1, d3.max(graphData.nodes, d =>
-        graphData.links.filter(link => link.source === d.id || link.target === d.id).length)])
+      .domain([1, d3.max(graphData.nodes, d => d.degree)]) // Use precomputed degrees
       .range([5, 20]);
 
     const simulation = d3.forceSimulation(graphData.nodes)
@@ -114,26 +121,24 @@ fetch("graph_data.json")
     link.append("title")
       .text(d => d.source.id + " ->\n" + d.target.id);
 
-    const node = zoomGroup.append("g")
-      .attr("class", "nodes")
-      .selectAll("circle")
-      .data(graphData.nodes.filter(d => !d.isCentral))
-      .enter().append("circle")
-      .attr("r", d => {
-        d.degree = graphData.links.filter(link => link.source === d.id || link.target === d.id).length;
-        return degreeScale(d.degree);
-      })
-      .attr("fill", d => subgraphColors(d.subgraph))
-      .on("click", (event, d) => {
-        window.open(d.url, "_blank");
-      })
-      .call(d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended));
+  // Adjust the node rendering to use precomputed degree
+  const node = zoomGroup.append("g")
+    .attr("class", "nodes")
+    .selectAll("circle")
+    .data(graphData.nodes.filter(d => !d.isCentral))
+    .enter().append("circle")
+    .attr("r", d => degreeScale(d.degree)) // Use degreeScale with precomputed degree
+    .attr("fill", d => subgraphColors(d.subgraph))
+    .on("click", (event, d) => {
+      window.open(d.url, "_blank");
+    })
+    .call(d3.drag()
+      .on("start", dragstarted)
+      .on("drag", dragged)
+      .on("end", dragended));
 
-    node.append("title")
-      .text(d => d.tooltip);
+      node.append("title")
+        .text(d => d.tooltip);
 
     // Add text labels for central nodes
     const centralNodesText = zoomGroup.append("g")
@@ -178,6 +183,34 @@ fetch("graph_data.json")
       });
 
     svg.call(zoom);
+    
+    // Create a tooltip element
+    const tooltip = d3.select("body").append("div")
+      .attr("class", "tooltip")
+      .style("position", "absolute")
+      .style("pointer-events", "none") // Prevent interference with mouse events
+      .style("background", "#fff")
+      .style("border", "1px solid #ccc")
+      .style("border-radius", "4px")
+      .style("padding", "8px")
+      .style("box-shadow", "0 2px 5px rgba(0, 0, 0, 0.2)")
+      .style("opacity", 0); // Initially hidden
+
+    // Add mouse events to the nodes
+    node.on("mouseover", (event, d) => {
+      tooltip
+        .style("opacity", 1) // Show the tooltip
+        .html(`<strong>${d.tooltip}</strong>`); // Display node's tooltip
+    })
+    .on("mousemove", (event) => {
+      tooltip
+        .style("left", `${event.pageX + 10}px`) // Offset to the right of the cursor
+        .style("top", `${event.pageY + 10}px`); // Offset slightly below the cursor
+    })
+    .on("mouseout", () => {
+      tooltip
+        .style("opacity", 0); // Hide the tooltip
+    });
 
     function dragstarted(event, d) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
