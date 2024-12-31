@@ -201,8 +201,7 @@ def load_json_data(file_paths):
     for file_path in file_paths:
         if 'data_dict' not in file_path:
             continue
-        json_str = dd_excel_to_json(file_path)
-        data_dict = json.loads(json_str)
+        data_dict = dd_excel_to_json(file_path)
         data_dict["File Path"] = file_path
         json_data.append(data_dict)
     return json_data
@@ -212,8 +211,7 @@ def load_json_data(file_paths):
 def write_json_data(json_data, replaced, replacer):
     for data_dict in json_data:
         new_file_path = data_dict["File Path"].replace(replaced, replacer)
-        json_str = json.dumps(data_dict, indent=4)
-        dd_json_to_excel(json_str, new_file_path)
+        dd_json_to_excel(data_dict, new_file_path)
 
 
 # Group the data dictionary information by database
@@ -711,7 +709,7 @@ def graph_to_json(G):
         node = {
             'id': dd_for,
             'tooltip': G.get_node(dd_for).attr['tooltip'],
-            'url': G.get_node(dd_for).attr['URL'],
+            'url': G.get_node(dd_for).attr['URL'].replace('\\\r', ''),
             'subgraph': dd_for[1:-1].split('].[')[1]
         }
         nodes.append(node)
