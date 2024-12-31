@@ -7,7 +7,7 @@ fetch("graph_data.json")
 
     const zoomGroup = svg.append("g");
 
-    const subgraphColors = d3.scaleOrdinal(d3.schemePastel1);
+    const subgraphColors = d3.scaleOrdinal(d3.schemeTableau10);
     const subgraphs = Array.from(new Set(graphData.nodes.map(d => d.subgraph)));
     subgraphColors.domain(subgraphs);
 
@@ -72,7 +72,7 @@ fetch("graph_data.json")
       .force("link", d3.forceLink(graphData.links)
         .id(d => d.id)
         .distance(d => {
-          if (d.isCentralLink) return 300; // Longer distance for central-to-central links
+          if (d.isCentralLink) return 100; // Longer distance for central-to-central links
           const sourceId = typeof d.source === "string" ? d.source : d.source.id;
           const targetId = typeof d.target === "string" ? d.target : d.target.id;
 
@@ -98,8 +98,21 @@ fetch("graph_data.json")
       .selectAll("line")
       .data(graphData.links)
       .enter().append("line")
-      .attr("stroke", d => (d.isCentralLink ? "none" : "gray"))
-      .attr("stroke-width", 1.5);
+      .attr("stroke", d => {
+        const sourceId = typeof d.source === "string" ? d.source : d.source.id;
+        if (sourceId.startsWith("central_")) {
+          return "none";
+        }
+        if (d.source.subgraph !== d.target.subgraph) {
+          return subgraphColors(d.source.subgraph);
+        }
+        return "blue";
+      })
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", d => d.source.subgraph !== d.target.subgraph ? "4,2" : "");
+
+    link.append("title")
+      .text(d => d.source.id + " ->\n" + d.target.id);
 
     const node = zoomGroup.append("g")
       .attr("class", "nodes")
@@ -122,6 +135,7 @@ fetch("graph_data.json")
     node.append("title")
       .text(d => d.tooltip);
 
+    // Add text labels for central nodes
     const centralNodesText = zoomGroup.append("g")
       .attr("class", "central-nodes")
       .selectAll("text")
@@ -130,12 +144,16 @@ fetch("graph_data.json")
       .text(d => d.tooltip)
       .attr("text-anchor", "middle")
       .attr("dy", "0.35em")
-      .attr("font-size", "12px")
-      .attr("font-weight", "bold")
-      .style("fill", "black")
-      .style("stroke", d => subgraphColors(d.subgraph))
-      .style("stroke-width", "1px")
-      .style("stroke-opacity", "1");
+      .attr("font-size", "14px")
+      .attr("font-weight", "900")
+      .style("fill", d => subgraphColors(d.subgraph))
+      .style("stroke", "white")
+      .style("stroke-width", "0.5px")
+      .style("stroke-opacity", "1")
+      .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", draggedCentral)
+        .on("end", dragended));
 
     simulation.on("tick", () => {
       link
@@ -154,7 +172,7 @@ fetch("graph_data.json")
     });
 
     const zoom = d3.zoom()
-      .scaleExtent([0.5, 5])
+      .scaleExtent([0.2, 10])
       .on("zoom", (event) => {
         zoomGroup.attr("transform", event.transform);
       });
@@ -176,6 +194,15 @@ fetch("graph_data.json")
       if (!event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;
+    }
+
+    // New drag behavior for central nodes (dragging the text)
+    function draggedCentral(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+      d3.select(this)
+        .attr("x", event.x)
+        .attr("y", event.y);
     }
   })
   .catch(error => console.error("Error loading graph data:", error));
