@@ -118,8 +118,56 @@ fetch("graph_data.json")
       .attr("stroke-width", 1.5)
       .attr("stroke-dasharray", d => d.source.subgraph !== d.target.subgraph ? "4,2" : "");
 
-    link.append("title")
-      .text(d => d.source.id + " ->\n" + d.target.id);
+    // link.append("title")
+    //   .text(d => d.source.id + " ->\n" + d.target.id);
+
+
+    // Create a tooltip element (if not already created)
+    const linkTooltip = d3.select("body").append("div")
+      .attr("class", "custom-tooltip")
+      .style("position", "absolute")
+      .style("pointer-events", "none") // Prevent tooltip from interfering with mouse events
+      .style("background", "#fff")
+      .style("border", "1px solid #ccc")
+      .style("border-radius", "4px")
+      .style("padding", "8px")
+      .style("box-shadow", "0 2px 5px rgba(0, 0, 0, 0.2)")
+      .style("opacity", 0); // Initially hidden
+
+    // Add mouse events to show tooltips
+    link.on("mouseover", (event, d) => {
+      linkTooltip
+        .style("opacity", 1) // Make the tooltip visible
+        .html(`<strong>${d.source.id + " ->\n" + d.target.id}</strong>`); // Add tooltip content
+
+      d3.select(event.target)
+        .transition().duration(200)
+        .attr("stroke", "black") // Add black outline
+        .attr("stroke-width", 2); // increase outline width
+    })
+    link.on("mousemove", (event) => {
+      linkTooltip
+        .style("left", `${event.pageX + 10}px`) // Offset the tooltip to the right of the cursor
+        .style("top", `${event.pageY + 10}px`); // Offset the tooltip slightly below the cursor
+    })
+    .on("mouseout", (event) => {
+      linkTooltip
+        .style("opacity", 0); // Hide the tooltip
+
+      d3.select(event.target)
+        .transition().duration(200)
+        .attr("stroke", d => {
+          const sourceId = typeof d.source === "string" ? d.source : d.source.id;
+          if (sourceId.startsWith("central_")) {
+            return "none";
+          }
+          if (d.source.subgraph !== d.target.subgraph) {
+            return subgraphColors(d.source.subgraph);
+          }
+          return "blue";
+        })
+        .attr("stroke-width", 1.5);
+    });
 
   // Adjust the node rendering to use precomputed degree
   const node = zoomGroup.append("g")
@@ -137,8 +185,47 @@ fetch("graph_data.json")
       .on("drag", dragged)
       .on("end", dragended));
 
-      node.append("title")
-        .text(d => d.tooltip);
+      // node.append("title")
+      //   .text(d => d.tooltip);
+
+    // Create a tooltip element (if not already created)
+    const nodeTooltip = d3.select("body").append("div")
+      .attr("class", "custom-tooltip")
+      .style("position", "absolute")
+      .style("pointer-events", "none") // Prevent tooltip from interfering with mouse events
+      .style("background", "#fff")
+      .style("border", "1px solid #ccc")
+      .style("border-radius", "4px")
+      .style("padding", "8px")
+      .style("box-shadow", "0 2px 5px rgba(0, 0, 0, 0.2)")
+      .style("opacity", 0); // Initially hidden
+
+    // Add mouse events to show tooltips
+    node.on("mouseover", (event, d) => {
+      nodeTooltip
+        .style("opacity", 1) // Make the tooltip visible
+        .html(`<strong>${d.tooltip}</strong>`); // Add tooltip content
+      // Increase the node radius on hover
+      d3.select(event.target)
+        .transition().duration(200) // Smooth transition
+        .attr("r", d => degreeScale(d.degree) * 1.3) // Increase radius
+        .attr("stroke", "black") // Add black outline
+        .attr("stroke-width", 2); // Set outline width
+    })
+    .on("mousemove", (event) => {
+      nodeTooltip
+        .style("left", `${event.pageX + 10}px`) // Offset the tooltip to the right of the cursor
+        .style("top", `${event.pageY + 10}px`); // Offset the tooltip slightly below the cursor
+    })
+    .on("mouseout", (event) => {
+      nodeTooltip
+        .style("opacity", 0); // Hide the tooltip
+      // Reset the node radius on mouseout
+      d3.select(event.target)
+        .transition().duration(200) // Smooth transition
+        .attr("r", d => degreeScale(d.degree)) // Reset radius
+        .attr("stroke", "none"); // Remove outline
+    });
 
     // Add text labels for central nodes
     const centralNodesText = zoomGroup.append("g")
@@ -180,38 +267,16 @@ fetch("graph_data.json")
       .scaleExtent([0.2, 10])
       .on("zoom", (event) => {
         zoomGroup.attr("transform", event.transform);
+
+        // Maintain constant size for central node text if zoomed out
+        if (event.transform.k < 1) {
+          centralNodesText.style("font-size", `${14 / (event.transform.k)}px`)
+            .style("stroke-width", `${0.5 / event.transform.k}px`);
+        }
       });
 
     svg.call(zoom);
     
-    // Create a tooltip element
-    const tooltip = d3.select("body").append("div")
-      .attr("class", "tooltip")
-      .style("position", "absolute")
-      .style("pointer-events", "none") // Prevent interference with mouse events
-      .style("background", "#fff")
-      .style("border", "1px solid #ccc")
-      .style("border-radius", "4px")
-      .style("padding", "8px")
-      .style("box-shadow", "0 2px 5px rgba(0, 0, 0, 0.2)")
-      .style("opacity", 0); // Initially hidden
-
-    // Add mouse events to the nodes
-    node.on("mouseover", (event, d) => {
-      tooltip
-        .style("opacity", 1) // Show the tooltip
-        .html(`<strong>${d.tooltip}</strong>`); // Display node's tooltip
-    })
-    .on("mousemove", (event) => {
-      tooltip
-        .style("left", `${event.pageX + 10}px`) // Offset to the right of the cursor
-        .style("top", `${event.pageY + 10}px`); // Offset slightly below the cursor
-    })
-    .on("mouseout", () => {
-      tooltip
-        .style("opacity", 0); // Hide the tooltip
-    });
-
     function dragstarted(event, d) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
