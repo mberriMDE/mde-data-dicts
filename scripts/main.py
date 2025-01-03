@@ -5,57 +5,54 @@ import shutil
 
 if __name__ == "__main__":
     ### STANDARDIZE EXCEL FILES
-    directories = [
-        'data\\SLEDS',
-    ]
-    files = []
-    for directory in directories:
-        files.extend(list_files(directory))
+    # directories = [
+    #     'data\\SLEDS',
+    # ]
+    # files = []
+    # for directory in directories:
+    #     files.extend(list_files(directory))
 
-    # print(len(files))
-    # Remove non data dicts from the list
+    # # print(len(files))
+    # # Remove non data dicts from the list
 
-    # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
+    # # files = ['dbo\\DIRS.dbo.PelletGunType_data_dict.xlsx']
 
-    for file in files:
-        names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
-        database_name = "SLEDSDW"  #names[0]
-        # find_codes = True if database_name in ['RDMAttributes'] else False
-        output_file = file.replace('SLEDS\\', 'SLEDS2\\')
+    # for file in files:
+    #     names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
+    #     database_name = "SLEDSDW"  #names[0]
+    #     # find_codes = True if database_name in ['RDMAttributes'] else False
+    #     output_file = file.replace('SLEDS\\', 'SLEDS2\\')
 
-        directory = "\\".join(output_file.split("\\")[0:-1])
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+    #     directory = "\\".join(output_file.split("\\")[0:-1])
+    #     if not os.path.exists(directory):
+    #         os.makedirs(directory)
 
-        if '_data_dict.xlsx' in file:
-            standardize_excel(file,
-                              output_file,
-                              make_json=False,
-                              find_codes=True,
-                              order_codes=True,
-                              maintain_columns=True,
-                              custom_col_names=get_col_headers(database_name),
-                              include_web_sleds_info=True)
-        else:
-            shutil.copy(file, output_file)
+    #     if '_data_dict.xlsx' in file:
+    #         standardize_excel(file,
+    #                           output_file,
+    #                           make_json=False,
+    #                           find_codes=True,
+    #                           order_codes=True,
+    #                           maintain_columns=True,
+    #                           custom_col_names=get_col_headers(database_name),
+    #                           include_web_sleds_info=True)
+    #     else:
+    #         shutil.copy(file, output_file)
 
-    # ### INITIALIZE DATA DICTIONARIES
-    # # Read in the table names
-    # with open('data\\StudentLevelObservations_tables.txt') as f:
-    #     tables = [line.strip() for line in f]
+    ### INITIALIZE DATA DICTIONARIES
+    # Read in the table names
+    with open('data\\StudentLevelObservations_tables.txt') as f:
+        tables = [line.strip() for line in f]
 
-    # server = 'EDU-SQLPROD01'
-    # database = 'StudentLevelObservations'
-    # view = 'dm'
+    server = 'EDU-SQLPROD01'
+    database = 'StudentLevelObservations'
+    view = 'dm'
 
-    # for table in tables:
-    #     data_dict = initialize_data_dict(server, database, view, table)
-    #     json_data = json.dumps(data_dict, indent=4)
-    #     file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"
-    #     os.makedirs(os.path.dirname(file_name), exist_ok=True)
-    #     dd_json_to_excel(json_data,
-    #                      file_name,
-    #                      custom_col_names=get_col_headers(database))
+    for table in tables:
+        data_dict = initialize_data_dict(server, database, view, table)
+        file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"
+        os.makedirs(os.path.dirname(file_name), exist_ok=True)
+        dd_json_to_excel(data_dict, file_name)
 
     # ### LIST FILES
     # directories = ['data\\dbo']
