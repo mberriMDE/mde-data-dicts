@@ -32,8 +32,7 @@ def search_data_dicts(directories: list[str],
         if "_data_dict.xlsx" not in file:
             continue
         # print(file)
-        json_str = dd_excel_to_json(file)
-        json_data = json.loads(json_str)
+        json_data = dd_excel_to_json(file)
         dd_for = json_data["Data Dictionary For"]
 
         for item in json_data["Data Dictionary"]:
@@ -128,8 +127,8 @@ def search_data_dicts(directories: list[str],
 
 
 if __name__ == "__main__":
-    directories = ['data\\excel_dds']
-    search_terms = ['stateaidcategory']
+    directories = ['data\\excel_dds\\EDU-SQLPROD01\\MDEORG']
+    search_terms = ['program']
     column_names = ['Field Name']
     match_locations = search_data_dicts(directories,
                                         search_terms,
