@@ -87,12 +87,13 @@ fetch("graph_data.json")
       const degreeScale = d3.scaleLinear()
         .domain([1, d3.max(graphData.nodes, d => d.degree)]) // Use precomputed degrees
         .range([5, 20]);
+      console.log(subgraphs.length);
 
       simulation = d3.forceSimulation(graphData.nodes)
         .force("link", d3.forceLink(graphData.links)
           .id(d => d.id)
           .distance(d => {
-            if (d.isCentralLink) return 100; // Longer distance for central-to-central links
+            if (d.isCentralLink) return subgraphs.length * 10; // Longer distance for central-to-central links that increases as the number of subgraphs increase
             const sourceId = typeof d.source === "string" ? d.source : d.source.id;
             const targetId = typeof d.target === "string" ? d.target : d.target.id;
 
@@ -102,7 +103,7 @@ fetch("graph_data.json")
             return sourceSubgraph === targetSubgraph ? 50 : 0;
           })
           .strength(d => {
-            if (d.isCentralLink) return 0.1; // Weak force for central-to-central links
+            if (d.isCentralLink) return 8/subgraphs.length**2; // Weak force for central-to-central links that decrease as the number of subgraphs increase
             const sourceSubgraph = typeof d.source === "string" ? graphData.nodes.find(n => n.id === d.source).subgraph : d.source.subgraph;
             const targetSubgraph = typeof d.target === "string" ? graphData.nodes.find(n => n.id === d.target).subgraph : d.target.subgraph;
 
