@@ -45,9 +45,9 @@ if __name__ == "__main__":
         tables = [line.strip() for line in f]
 
     server = 'EDU-SQLPROD01'
-    database = 'StudentLevelObservations'
-    view = 'dm'
-
+    database = 'MDEORG'
+    view = 'apicurrent'
+    tables = ['Organization']
     for table in tables:
         data_dict = initialize_data_dict(server, database, view, table)
         file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"
