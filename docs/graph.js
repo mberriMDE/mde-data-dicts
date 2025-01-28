@@ -1,10 +1,36 @@
-let simulation;
 // let globalTransform = { x: 0, y: 0 , k: -1 };
 
-fetch("graph_data.json")
-  .then(response => response.json())
-  .then(graphData => {
-    const fullGraphData = graphData;
+/* 
+This function looks for simulation_position.json in the current directory, if it is not found, graph_data.json is used.
+simulation_position.json is created by the download button at the bottom of the page and has full position/transformation data.
+graph_data.json is the original data used to create the graph. It has no positioning/transformation data, just the node and link data.
+*/
+async function loadGraphData() {
+  try {
+    const response = await fetch("simulation_position.json");
+    if (!response.ok) {
+      response = await fetch("graph_data.json");
+      if (!response.ok) {
+        throw new Error("Failed to fetch graph data");
+      }
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error loading graph data:", error);
+    return null;
+  }
+}
+
+let graphData = await loadGraphData();
+const fullGraphData = graphData;
+
+function initializeGraph() {
+
+
+    const inititalNodeData = simulationData.nodes;
+    const initialLinkData = simulationData.links;
+    const initialTransform =  d3.zoomIdentity.translate(translateX, translateY).scale(scale);
     let currentGraphData = fullGraphData;
 
     createSubgraphCheckboxes(fullGraphData); // Generate the subgraph checkboxes to the left of the svg
@@ -290,8 +316,17 @@ fetch("graph_data.json")
         });
 
       svg.call(zoom);
-
-
+      
+      scale = 0.5
+      translateX = width / 2 * (1 - scale)
+      translateY = height / 2 * (1 - scale)
+      const initialTransform = d3.zoomIdentity.translate(translateX, translateY).scale(scale); // Define initial transform
+      // Apply the zoom behavior to the svg
+      svg.call(d3.zoom()
+          .on("zoom", (event) => {
+              zoomGroup.attr("transform", event.transform);
+          }))
+          .call(zoom.transform, initialTransform); // Set the initial zoom level
 
     }
     
@@ -371,3 +406,48 @@ fetch("graph_data.json")
     }
   })
   .catch(error => console.error("Error loading graph data:", error));
+
+
+// Assuming the simulation and zoom setup are already created
+
+// Create the button
+const button = document.createElement("button");
+button.textContent = "Download Simulation Position";
+button.style.display = "block";
+button.style.margin = "10px auto";
+button.style.padding = "10px";
+button.style.cursor = "pointer";
+
+// Add the button below the SVG
+document.body.appendChild(button);
+
+// Function to download JSON data
+function downloadJSON(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Attach click event to the button
+button.addEventListener("click", () => {
+    // Retrieve the current zoom/pan transformation
+    const transform = d3.zoomTransform(d3.select("svg").node());
+    
+    // Prepare the data to download
+    const simulationData = {
+        nodes: simulation.nodes(), // Nodes array from the simulation
+        links: simulation.force("link").links(), // Links array from the simulation
+        transformation: {
+            translateX: transform.x,
+            translateY: transform.y,
+            scale: transform.k
+        }
+    };
+
+    // Download the JSON file
+    downloadJSON(simulationData, "simulation_position.json");
+});
