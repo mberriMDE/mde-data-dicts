@@ -5,6 +5,8 @@ This function looks for simulation_position.json in the current directory, if it
 simulation_position.json is created by the download button at the bottom of the page and has full position/transformation data.
 graph_data.json is the original data used to create the graph. It has no positioning/transformation data, just the node and link data.
 */
+let graphData;
+let simulation
 async function loadGraphData() {
   try {
     const response = await fetch("simulation_position.json");
@@ -14,8 +16,8 @@ async function loadGraphData() {
         throw new Error("Failed to fetch graph data");
       }
     }
-    const data = await response.json();
-    return data;
+    graphDatadata = await response.json();
+    initializeGraph();
   } catch (error) {
     console.error("Error loading graph data:", error);
     return null;
@@ -25,11 +27,7 @@ async function loadGraphData() {
 
 // let globalTransform = { x: 0, y: 0 , k: -1 };
 
-initializeGraph();
-
-async function initializeGraph() {
-  let graphData = await loadGraphData();
-  let simulation;
+function initializeGraph() {
   graphData.links.forEach(link => {
       link.source = graphData.nodes.find(n => n.id === link.source) || link.source;
       link.target = graphData.nodes.find(n => n.id === link.target) || link.target;
