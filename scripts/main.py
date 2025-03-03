@@ -41,13 +41,12 @@ if __name__ == "__main__":
 
     ### INITIALIZE DATA DICTIONARIES
     # Read in the table names
-    # with open('data\\rdm_assessments_tables.txt') as f:
-    #     tables = [line.strip() for line in f]
-    tables = ['ReasonableForceRoleType']
+    with open('data\\rdm_assessments_tables.txt') as f:
+        tables = [line.strip() for line in f]
 
-    server = 'EDU-SQLPROD01'
-    database = 'DIRS'
-    view = 'dbo'
+    server = 'EDU-RDMPROD01'
+    database = 'RDMAssessments'
+    view = 'RPT'
     for table in tables:
         data_dict = initialize_data_dict(server, database, view, table)
         file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"

@@ -65,8 +65,8 @@ class Key:
                 self.global_label = next(iter(self.global_names))
                 self.local_label = next(iter(self.local_names))
             except StopIteration:
-                print(self.global_names)
-                print(self.local_names)
+                # print(self.global_names)
+                # print(self.local_names)
                 self.global_label = self.global_names
                 self.local_label = self.local_names
 
@@ -507,8 +507,6 @@ def fill_keys(json_data,
             if skip:
                 continue
             if lower_global is not None:
-                if 'courseleveltype' in lower_global:
-                    print(dd_for)
                 write_to_key_info.append(
                     f'G: {global_lower_to_upper[lower_global]}')
             else:
@@ -716,7 +714,11 @@ def graph_to_json(G):
 
     links = []
     for edge in G.edges():
-        link = {'source': edge[0], 'target': edge[1]}
+        link = {
+            'source': edge[0],
+            'target': edge[1],
+            'tooltip': edge.attr['tooltip'].replace('\\\r', ''),
+        }
         links.append(link)
     graph_json = {'nodes': nodes, 'links': links}
     return graph_json
