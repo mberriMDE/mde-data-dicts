@@ -277,7 +277,45 @@ function updateFormatting() {
     .on("mouseover", (event, d) => {
       linkTooltip
         .style("opacity", 1) // Make the tooltip visible
-        .html(`<strong>${d.tooltip}</strong>`); // Add tooltip content
+        .html(() => {
+          const relationships = d.tooltip.split("++");
+          let tableHTML = '<table>';
+          // --- Table Header Row ---
+          const firstRelationship = relationships[0]; // Assume the first relationship contains the full table names
+          if (firstRelationship) {
+            const parts = firstRelationship.split(/ (->|<-) /); // Split to extract table names
+            const sourceTableFullName = parts[0].substring(0, parts[0].lastIndexOf('.')); // Remove last part to get table name
+            const targetTableFullName = parts[2].substring(0, parts[2].lastIndexOf('.')); // Remove last part to get table name
+
+            tableHTML += `
+              <tr>
+                <th>Field in ${sourceTableFullName}</th>
+                <th></th>
+                <th>Field in ${targetTableFullName}</th>
+              </tr>
+              <tr><td colspan="3"><hr/></td></tr>`; // Separator line
+          }
+
+          // --- Relationship Rows ---
+          relationships.forEach(relationship => {
+            if (relationship) { // Ensure relationship is not empty
+              const parts = relationship.split(/ (->|<-) /);
+              const sourceField = parts[0].substring(parts[0].lastIndexOf('.') + 1); // Extract field name
+              const direction = parts[1];
+              const targetField = parts[2].substring(parts[2].lastIndexOf('.') + 1); // Extract field name
+
+              tableHTML += `
+                <tr>
+                  <td style="text-align: right;">${sourceField}</td>
+                  <td style="text-align: center;">${direction}</td>
+                  <td style="text-align: left;">${targetField}</td>
+                </tr>`;
+            }
+          });
+
+          tableHTML += `</table>`;
+          return tableHTML;
+        }); // Add tooltip content
 
       d3.select(event.target)
         .transition().duration(200)
