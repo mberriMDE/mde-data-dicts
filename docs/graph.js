@@ -236,6 +236,10 @@ function updateFormatting() {
           .transition().duration(200) // Smooth transition
           .attr("r", d => nodeSize(d.degree)) // Reset radius
           .attr("stroke", "none"); // Remove outline
+      })
+      .on("click", (event, d) => {
+        // Open the url in a new tab
+        window.open(d.url, "_blank");
       });
 
   // Apply formatting to the central nodes
