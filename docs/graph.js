@@ -89,7 +89,7 @@ loadGraphData();
  */
 async function loadGraphData() {
   try {
-    const response = await fetch("simulation_position.json");
+    const response = await fetch("graph_data.json");
     if (!response.ok) {
       response = await fetch("graph_data.json");
       if (!response.ok) {
@@ -111,6 +111,7 @@ async function loadGraphData() {
     graphData.links.forEach(link => {
       link.source = graphData.nodes.find(n => n.id === link.source) || link.source;
       link.target = graphData.nodes.find(n => n.id === link.target) || link.target;
+      link.tooltip = link.tooltip
       allLinks.push(link);
     });
 
@@ -184,7 +185,8 @@ function updateGraphData() {
     // Ensure links reference the actual node objects in the current simulation
     return {
       source: nodeMap[link.source.id],
-      target: nodeMap[link.target.id]
+      target: nodeMap[link.target.id],
+      tooltip: link.tooltip
     }
   });
 
@@ -236,6 +238,10 @@ function updateFormatting() {
           .transition().duration(200) // Smooth transition
           .attr("r", d => nodeSize(d.degree)) // Reset radius
           .attr("stroke", "none"); // Remove outline
+      })
+      .on("click", (event, d) => {
+        // Open the url in a new tab
+        window.open(d.url, "_blank");
       });
 
   // Apply formatting to the central nodes
@@ -271,7 +277,7 @@ function updateFormatting() {
     .on("mouseover", (event, d) => {
       linkTooltip
         .style("opacity", 1) // Make the tooltip visible
-        .html(`<strong>${d.source.id + " ->\n" + d.target.id}</strong>`); // Add tooltip content
+        .html(`<strong>${d.tooltip}</strong>`); // Add tooltip content
 
       d3.select(event.target)
         .transition().duration(200)

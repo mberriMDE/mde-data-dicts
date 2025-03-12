@@ -161,14 +161,26 @@ class TableEdge:
         self.same_database = self.same_server and source.database == target.database
         self.same_view = self.same_database and source.view == target.view
 
-        # Create the edge in the graph
-        self.graph.add_edge(graph.get_node(source.dd_for),
-                            graph.get_node(target.dd_for),
-                            dir="back",
-                            **self.attr)
+        # if 'UEIUpdate' in source.dd_for or 'UEIUpdate' in target.dd_for:
+        #     print('here')
+
+        # If the edge doesn't already exist, create it
+        if not self.graph.has_edge(source.dd_for, target.dd_for):
+            self.graph.add_edge(
+                graph.get_node(source.dd_for),
+                graph.get_node(target.dd_for),
+                # dir="back",
+                **self.attr)
         self.edge = self.graph.get_edge(source.dd_for, target.dd_for)
 
-        tooltip = f'{source.dd_for}.[{source_key.local_label}]\n <- {target.dd_for}.[{target_key.local_label}]'
+        # Append the tooltip to the existing tooltip
+        if self.edge.attr['tooltip']:
+            self.edge.attr['tooltip'] = self.edge.attr[
+                'tooltip'] + f'++{source.dd_for}.[{source_key.local_label}] <- {target.dd_for}.[{target_key.local_label}]'
+        else:
+            self.edge.attr[
+                'tooltip'] = f'{source.dd_for}.[{source_key.local_label}] <- {target.dd_for}.[{target_key.local_label}]'
+
         # Set edge attributes based on metadata
         # self.graph.get_edge(
         #     source.dd_for,
@@ -184,7 +196,6 @@ class TableEdge:
         self.edge.attr['color'] = 'blue' if self.same_database else self.edge[
             0].attr['fillcolor']
         self.edge.attr['style'] = 'solid' if self.same_database else 'dashed'
-        self.edge.attr['tooltip'] = tooltip
 
 
 # List all excel files in a given directory
@@ -717,7 +728,8 @@ def graph_to_json(G):
         link = {
             'source': edge[0],
             'target': edge[1],
-            'tooltip': edge.attr['tooltip'].replace('\\\r', ''),
+            'tooltip': edge.attr['tooltip'].replace('\\\r',
+                                                    '')  #.replace('++', '\n'),
         }
         links.append(link)
     graph_json = {'nodes': nodes, 'links': links}
@@ -753,7 +765,7 @@ def build_graph(json_data, key_dict, show_reference_tables=True):
     data = format_json_data(json_data)
 
     # Initialize graph and subgraphs
-    G = pgv.AGraph(strict=False, directed=True)
+    G = pgv.AGraph(strict=False, directed=False)
     subgraphs = {}
     color_map = {}
     color_list = generate_colors()
