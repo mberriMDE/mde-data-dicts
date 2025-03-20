@@ -1,4 +1,4 @@
-from json_excel_conversion import *
+from .json_excel_conversion import *
 
 
 def search_data_dicts(directories: list[str],
