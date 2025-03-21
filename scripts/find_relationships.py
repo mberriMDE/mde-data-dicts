@@ -1,19 +1,21 @@
 import json
-import csv
 from collections import defaultdict
 from pathlib import Path
-from json_excel_conversion import dd_json_to_excel, dd_excel_to_json
-import networkx as nx
 import pygraphviz as pgv
 import re
 import urllib.parse
-import math
+import sys
+import os
 
-# class KeyField:
+# Add the parent directory where ddtools is located to the path
+# This is necessary to import ddtools
+scripts_dir = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),  # Directory of this script
+        ".."))
+sys.path.append(scripts_dir)
 
-#     def __init__(self, global_name: str, local_name: str):
-#         self.global_name = global_name
-#         self.local_name = local_name
+from ddtools.json_excel_conversion import dd_json_to_excel, dd_excel_to_json
 
 
 class Key:

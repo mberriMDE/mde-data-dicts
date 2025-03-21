@@ -1,1 +1,3 @@
-scripts/runfuncs.py
+scripts/user.py
+**/__pycache__/
+*.pyc

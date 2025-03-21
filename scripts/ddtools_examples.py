@@ -1,6 +1,17 @@
-from json_excel_conversion import *
-from custom_cols import get_col_headers
-from fetch_table_info import *
+import sys
+import os
+
+# Add the parent directory where ddtools is located to the path
+# This is necessary to import ddtools
+scripts_dir = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),  # Directory of this script
+        ".."))
+sys.path.append(scripts_dir)
+
+from ddtools.json_excel_conversion import *
+from ddtools.custom_cols import get_col_headers
+from ddtools.fetch_table_info import *
 import shutil
 
 ### EXAMPLE USAGE OF DATA DICTIONARY FUNCTIONS.

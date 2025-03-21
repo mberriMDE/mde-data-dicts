@@ -1,9 +1,9 @@
 import pyodbc
 import json
-from json_excel_conversion import dd_json_to_excel, standardize_json
+from .json_excel_conversion import dd_json_to_excel, standardize_json
 import os
 from pathlib import Path
-from custom_cols import get_col_headers
+from .custom_cols import get_col_headers
 
 
 def list_files(directory, extension=".xlsx"):
@@ -164,63 +164,3 @@ def update_data_dict(server_name, database_name, view_name, table_name,
         data_dict["Data Dictionary"].append(table_info[column])
 
     return data_dict
-
-
-# if __name__ == "__main__":
-#     ### Section to initialize data dictionaries
-#     with open('data\\marss-to-add.txt') as f:
-#         tables = [line.strip() for line in f]
-#     server = 'EDU-SQLPROD01'
-#     database = 'MARSS'
-#     view = 'ref'
-#     # tables = files
-#     for table in tables:
-#         data_dict = initialize_data_dict(server,
-#                                          database,
-#                                          view,
-#                                          table,
-#                                          table_type="Reference Table")
-#         json_data = json.dumps(data_dict, indent=4)
-#         file_name = f"data\\initialized\\{database}\\{database}.{view}.{table}_data_dict.xlsx"
-#         os.makedirs(os.path.dirname(file_name), exist_ok=True)
-#         dd_json_to_excel(json_data,
-#                          file_name,
-#                          custom_col_names=get_col_headers(database))
-
-# ### Section to fix the "Null Meaning" column in the data dictionary
-# server_name = "EDU-RDMPROD01"
-
-# files = list_files(f"data\\RDMAttributes2")
-# for file in files:
-#     directory = "\\".join(file.split("\\")[:-1])
-#     if not os.path.exists(directory):
-#         os.makedirs("1" + directory)
-
-#     names = file.split("\\")[-1].replace("_data_dict.xlsx", "").split(".")
-#     database_name = names[0]
-#     view_name = names[1]
-#     table_name = names[2]
-#     # SQLPROD01\Assessments\dbo\Assessments.dbo.Assessment_WIDA_VERIFIED_ACCESS_data_dict.xlsx
-#     # table_name = file.split(
-#     #     "\\")[-1].replace("_data_dict.xlsx", "").split(".")[-1]
-#     # print(table_name)
-
-#     # Read in current data dictionary
-#     data_dict = None
-#     try:
-#         json_data = dd_excel_to_json(file)
-#         data_dict = json.loads(json_data)
-#     except FileNotFoundError:
-#         print(f"File not found: {file}")
-
-#     data_dict = initialize_data_dict(server_name,
-#                                      database_name,
-#                                      view_name,
-#                                      table_name,
-#                                      data_dict=data_dict)
-#     json_data = json.dumps(data_dict, indent=4)
-
-#     # Convert the data dictionary to an excel file
-#     dd_json_to_excel(json_data,
-#                      file.replace("RDMAttributes2", "RDMAttributes3"),
-#                      custom_col_names=get_col_headers(database_name))
