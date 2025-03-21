@@ -769,14 +769,3 @@ def list_files(directory, extension=".xlsx"):
     return [
         str(file) for file in path.rglob(f'*{extension}') if file.is_file()
     ]
-
-
-# main
-if __name__ == "__main__":
-    file = "data\EDU-SQLPROD01\DIRS\dbo\DIRS.dbo.AltEdServicesType_data_dict.xlsx"
-    standardize_excel(file,
-                      file.replace('dbo', 'dbo2'),
-                      make_json=False,
-                      find_codes=False,
-                      order_codes=False,
-                      maintain_columns=True)

@@ -124,30 +124,3 @@ def search_data_dicts(directories: list[str],
                         match_locations.append(location)
 
     return match_locations
-
-
-if __name__ == "__main__":
-    directories = ['data\\excel_dds']
-    search_terms = ['nslp']
-    column_names = ['Field Name', 'Description']
-    match_locations = search_data_dicts(directories,
-                                        search_terms,
-                                        column_names,
-                                        search_term_op="AND",
-                                        column_op="OR",
-                                        match_case=False,
-                                        concat=False)
-    for location in match_locations:
-        print(location)
-
-    # directories = ['data\\excel_dds\\EDU-SQLPROD01']
-    # search_terms = ['statusendcode']
-    # column_names = ['Description']
-    # match_locations = search_data_dicts(directories,
-    #                                     search_terms,
-    #                                     column_names,
-    #                                     search_term_op="OR",
-    #                                     column_op="OR",
-    #                                     match_case=False)
-    # for location in match_locations:
-    #     print(location)
