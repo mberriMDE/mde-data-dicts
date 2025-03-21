@@ -236,6 +236,10 @@ function updateFormatting() {
           .transition().duration(200) // Smooth transition
           .attr("r", d => nodeSize(d.degree)) // Reset radius
           .attr("stroke", "none"); // Remove outline
+      })
+      .on("click", (event, d) => {
+        // Open the url in a new tab
+        window.open(d.url, "_blank");
       });
 
   // Apply formatting to the central nodes
@@ -409,7 +413,7 @@ function ticked() {
 }
 
 function dragstarted(event, d) {
-    if (!event.active) simulation.alphaTarget(0.3).restart();
+    if (!event.active) simulation.alphaTarget(0.1).restart();
     d.fx = d.x;
     d.fy = d.y;
 
