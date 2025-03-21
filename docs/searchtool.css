@@ -22,6 +22,11 @@ body {
     display: block; /* Ensure small is displayed on a new line */
 }
 
+.warning {
+    color: red;
+    font-style: italic;
+}
+
 /* Optional: Adjust border styling for results box */
 #results {
     border-radius: 5px;
