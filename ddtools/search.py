@@ -1,13 +1,15 @@
 from .json_excel_conversion import *
 
 
-def search_data_dicts(directories: list[str],
-                      search_terms: list[str],
-                      column_names: list[str] = ["Field Names"],
-                      search_term_op: str = "AND",
-                      column_op: str = "OR",
-                      match_case: bool = False,
-                      concat: bool = False) -> list:
+def search_data_dicts(
+    directories: list[str],
+    search_terms: list[str],
+    column_names: list[str] = ["Field Name"],
+    search_term_op: str = "AND",
+    column_op: str = "OR",
+    match_case: bool = False,
+    concat: bool = False,
+) -> list:
     """
     Args:
         directories (list[str]): A list of directories to search for data dictionary files.
@@ -41,80 +43,98 @@ def search_data_dicts(directories: list[str],
                 concat_vals = " ".join(col_vals)
                 if search_term_op == "AND":  # Every search term must be in the field
                     if not match_case:
-                        if not all(term.lower() in concat_vals.lower()
-                                   for term in search_terms):
+                        if not all(
+                            term.lower() in concat_vals.lower() for term in search_terms
+                        ):
                             continue
                     else:
-                        if not all(term in concat_vals
-                                   for term in search_terms):
+                        if not all(term in concat_vals for term in search_terms):
                             continue
 
-                if search_term_op == "OR":  # At least one search term must be in the field
+                if (
+                    search_term_op == "OR"
+                ):  # At least one search term must be in the field
                     if not match_case:
-                        if not any(term.lower() in concat_vals.lower()
-                                   for term in search_terms):
+                        if not any(
+                            term.lower() in concat_vals.lower() for term in search_terms
+                        ):
                             continue
                     else:
-                        if not any(term in concat_vals
-                                   for term in search_terms):
+                        if not any(term in concat_vals for term in search_terms):
                             continue
 
                 location = f"{dd_for}.[{item['Field Name']}]"
                 match_locations.append(location)
 
             elif not concat:
-                if column_op == "AND":  # Search critera must be met in every column in column_names
+                if (
+                    column_op == "AND"
+                ):  # Search critera must be met in every column in column_names
                     in_all = True
                     for col in column_names:
-                        if search_term_op == "AND":  # All search terms must be in the field
+                        if (
+                            search_term_op == "AND"
+                        ):  # All search terms must be in the field
                             if not match_case:
-                                if not all(term.lower() in item[col].lower()
-                                           for term in search_terms):
+                                if not all(
+                                    term.lower() in item[col].lower()
+                                    for term in search_terms
+                                ):
                                     in_all = False
                                     break
                             else:
-                                if not all(term in item[col]
-                                           for term in search_terms):
+                                if not all(term in item[col] for term in search_terms):
                                     in_all = False
                                     break
-                        elif search_term_op == "OR":  # At least one search term must be in the field
+                        elif (
+                            search_term_op == "OR"
+                        ):  # At least one search term must be in the field
                             if not match_case:
-                                if not any(term.lower() in item[col].lower()
-                                           for term in search_terms):
+                                if not any(
+                                    term.lower() in item[col].lower()
+                                    for term in search_terms
+                                ):
                                     in_all = False
                                     break
                             else:
-                                if not any(term in item[col]
-                                           for term in search_terms):
+                                if not any(term in item[col] for term in search_terms):
                                     in_all = False
                                     break
                     if in_all:
                         location = f"{dd_for}.[{item['Field Name']}]"
                         match_locations.append(location)
 
-                if column_op == "OR":  # Search critera must be met in at least one column in column_names
+                if (
+                    column_op == "OR"
+                ):  # Search critera must be met in at least one column in column_names
                     in_any = False
                     for col in column_names:
-                        if search_term_op == "AND":  # All search terms must be in the field
+                        if (
+                            search_term_op == "AND"
+                        ):  # All search terms must be in the field
                             if not match_case:
-                                if all(term.lower() in item[col].lower()
-                                       for term in search_terms):
+                                if all(
+                                    term.lower() in item[col].lower()
+                                    for term in search_terms
+                                ):
                                     in_any = True
                                     break
                             else:
-                                if all(term in item[col]
-                                       for term in search_terms):
+                                if all(term in item[col] for term in search_terms):
                                     in_any = True
                                     break
-                        elif search_term_op == "OR":  # At least one search term must be in the field
+                        elif (
+                            search_term_op == "OR"
+                        ):  # At least one search term must be in the field
                             if not match_case:
-                                if any(term.lower() in item[col].lower()
-                                       for term in search_terms):
+                                if any(
+                                    term.lower() in item[col].lower()
+                                    for term in search_terms
+                                ):
                                     in_any = True
                                     break
                             else:
-                                if any(term in item[col]
-                                       for term in search_terms):
+                                if any(term in item[col] for term in search_terms):
                                     in_any = True
                                     break
                     if in_any:
